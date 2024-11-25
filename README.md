@@ -1,4 +1,8 @@
 # KDM
+Nella cartella Scripts/ ho aggiunto gli script di R per l'analisi dei dati di Rmats ottenuti su esperimenti di RBP knock-down
+01. **Splicing_analysis.R** : prende in input il nome dell'RBP, la cell_line (K562 o HepG2), il genoma (hg19 o hg38), la lunghezza delle regioni introniche che vogliamo creare (90) e l'alpha della regressione (0 per RIDGE, 1 per LASSO). Genera degli Rdata che sono nella cartella Rdata/Splicing_data/RBP_name/ e due file pdf che sono nella cartella Figure/
+02. **Splicing_analysis_functions.R** : contiene funzioni che vengono chiamate in Splicing_analysis.R
+
 
 Nella cartella Scripts/ ho aggiunto i file di R per le prime analisi di KDM sui datasets di GraphProt (https://doi.org/10.1186/gb-2014-15-1-r17)
 01. **create_CV.R** : per ogni esperimento nel dataset, crea un Rdata con le sequenze positive + negative divise nei 10 sottogruppi necessati per la cross-validation
