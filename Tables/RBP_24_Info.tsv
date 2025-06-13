@@ -1,0 +1,25 @@
+Experiment	PAPER	METHOD	CELL_LINE	PROTEIN	FUNCTION	CLUSTER	N.Peaks
+ALKBH5_Baltz2012	Baltz 2012	PAR-CLIP	HEK293	ALKBH5	Dioxygenase that demethylates RNA by oxidative demethylation	Exonic	1213
+C17ORF85_Baltz2012	Baltz 2012	PAR-CLIP	HEK293	C17ORF85	Form an alternative cap-binding complex which plays a key role in mRNA export.	Exonic	1860
+C22ORF28_Baltz2012	Baltz 2012	PAR-CLIP	HEK293	C22ORF28	Acts by directly joining spliced tRNA halves to mature-sized tRNAs by incorporating the precursor-derived splice junction phosphate into the mature tRNA	Exonic	9369
+CAPRIN1_Baltz2012	Baltz 2012	PAR-CLIP	HEK293	CAPRIN1	mRNA-binding protein that acts as a regulator of mRNAs transport, translation and/or stability, and which is involved in synaptic plasticity in neurons and cell proliferation and migration in multiple cell types	UTR3+exonic	8140
+ZC3H7B_Baltz2012	Baltz 2012	PAR-CLIP	HEK293	ZC3H7B	May be a specific regulator of miRNA biogenesis.	UTR3+intronic	48095
+PARCLIP_AGO1234	Hafner 2010	PAR-CLIP	HEK293	AGO1-4	Required for RNA-mediated gene silencing (RNAi) by the RNA-induced silencing complex (RISC).	UTR3+exonic	8595
+PARCLIP_IGF2BP123	Hafner 2010	PAR-CLIP	HEK293	IGF2BP1-3	RNA-binding factor that recruits target transcripts to cytoplasmic protein-RNA complexes 	UTR3+exonic	19438
+PARCLIP_PUM2	Hafner 2010	PAR-CLIP	HEK293	PUM2	Sequence-specific RNA-binding protein that acts as a post-transcriptional repressor by binding the 3'-UTR of mRNA targets	UTR3	21472
+PARCLIP_QKI	Hafner 2010	PAR-CLIP	HEK293	QKI	regulating RNA metabolic processes, such as pre-mRNA splicing, circular RNA (circRNA) formation, mRNA export, mRNA stability and/or translation	Intronic	92031
+PARCLIP_EWSR1	Hoell 2011	PAR-CLIP	HEK293	EWSR1	They may disturb gene expression by mimicking, or interfering with the normal function of CTD-POLII within the transcription initiation complex. 	UTR3+intronic	18049
+PARCLIP_FUS	Hoell 2011	PAR-CLIP	HEK293	FUS	DNA/RNA-binding protein that plays a role in various cellular processes such as transcription regulation, RNA splicing, RNA transport, DNA repair and damage response	Intronic	42332
+PARCLIP_TAF15	Hoell 2011	PAR-CLIP	HEK293	TAF15	RNA and ssDNA-binding protein that may play specific roles during transcription initiation at distinct promoters. Can enter the preinitiation complex together with the RNA polymerase II 	UTR3+intronic	36902
+CLIPSEQ_AGO2	Kishore 2011	HITS-CLIP	HEK293	AGO2	Required for RNA-mediated gene silencing (RNAi) by the RNA-induced silencing complex (RISC).	UTR3+exonic	27275
+CLIPSEQ_ELAVL1	Kishore 2011	HITS-CLIP	HEK293	ELAVL1	RNA-binding protein that binds to the 3'-UTR region of mRNAs and increases their stability	UTR3	9464
+PARCLIP_ELAVL1A	Kishore 2011	PAR-CLIP	HEK293	ELAVL1	RNA-binding protein that binds to the 3'-UTR region of mRNAs and increases their stability	UTR3	16292
+ICLIP_HNRNPC	Konig 2011	iCLIP	HEK293	HNRNPC	Binds pre-mRNA and nucleates the assembly of 40S hnRNP particles 	Intronic	34581
+PARCLIP_ELAVL1	Lebedeva 2011	PAR-CLIP	HEK293	ELAVL1	RNA-binding protein that binds to the 3'-UTR region of mRNAs and increases their stability	UTR3+intronic	125202
+PARCLIP_HUR	Mukherjee 2011	PAR-CLIP	HELA	ELAVL1	RNA-binding protein that binds to the 3'-UTR region of mRNAs and increases their stability	Intronic	8539
+CLIPSEQ_SFRS1	Sanford 2009		HEK293	SFRS1	Plays a role in preventing exon skipping, ensuring the accuracy of splicing and regulating alternative splicing.	Exonic	13793
+PARCLIP_MOV10	Sievers 2012	PAR-CLIP	HEK293	MOV10	5' to 3' RNA helicase that is involved in a number of cellular roles ranging from mRNA metabolism and translation, modulation of viral infectivity, inhibition of retrotransposition, or regulation of synaptic transmission	UTR3	9116
+ICLIP_TDP43	Tollervey 2011	iCLIP	SH-SY5Y_H9	TARDPB	RNA-binding protein that is involved in various steps of RNA biogenesis and processing	Intronic	10276
+ICLIP_TIA1	Wang 2010	iCLIP	HELA	TIA1	RNA-binding protein involved in the regulation of alternative pre-RNA splicing and mRNA translation by binding to uridine-rich (U-rich) RNA sequences 	UTR3+intronic	7298
+ICLIP_TIAL1	Wang 2010	iCLIP	HELA	TIAL1	RNA-binding protein involved in alternative pre-RNA splicing and in cytoplasmic stress granules formation	UTR3+intronic	44574
+PTBv1	Xue 2009	HITS-CLIP	HELA	PTB	Plays a role in pre-mRNA splicing and in the regulation of alternative splicing events.	Intronic	20962
