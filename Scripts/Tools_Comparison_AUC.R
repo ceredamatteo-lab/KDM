@@ -15,7 +15,7 @@ aucs=readRDS("Rdata/AUC_KDM.rds")%>%mutate(ID=paste0(target,"_",cell))%>%
 
 ## 1.1 TRAIN and TEST ----
 
-pdf("Figure/AUC_01_TRAIN_and_TEST.pdf",width = 10,height = 5)
+pdf("Figure/ENCODE_Dataset/AUC_01_TRAIN_and_TEST.pdf",width = 10,height = 5)
 ggarrange(ggplot(aucs,aes(x=Train_AUC,y=Test_AUC))+geom_point()+stat_cor()+ggtitle("TRAIN AUC vs TEST AUC")+theme_bw(),
           ggplot(aucs,aes(x=nTrainPeaks,y=abs(ratio)))+
             geom_point()+scale_x_log10()+
@@ -32,7 +32,7 @@ ggtexttable(
       mutate(across(where(is.numeric), ~ round(.x, 4))))%>%data.frame()%>%dplyr::rename(Val=1),
   theme = ttheme("light", base_size = 14))
 
-pdf("Figure/AUC_02_AUC_SUMMARY.pdf",width = 15,height = 8)
+pdf("Figure/ENCODE_Dataset/AUC_02_AUC_SUMMARY.pdf",width = 15,height = 8)
 ggarrange(
   ggplot(aucs,aes(x=cell,y=AUC,fill=cell))+geom_boxplot(notch = T,width=0.3)+stat_compare_means(label.x = 1.5,hjust=0.5,label = "p.format")+
     scale_fill_manual(values = colors_cell)+theme_bw()+theme(panel.grid = element_blank())+
@@ -62,7 +62,7 @@ colors_vn=c("Intron"="#2DAEE0","5ss"="#7D619A","Non-coding Exon"="#F8AE1A","3'UT
 vn=readRDS("Rdata/VN_clusters.rds")
 aucs=merge(aucs,vn%>%select(ID,VN_Class),by="ID",all.x = T)
 
-pdf("Figure/AUC_03_VanNostrand_Clusters.pdf",width = 15,height = 5)
+pdf("Figure/ENCODE_Dataset/AUC_03_VanNostrand_Clusters.pdf",width = 15,height = 5)
 ggarrange(
   ggplot(aucs%>%filter(!is.na(VN_Class)),aes(x=VN_Class,y=AUC,fill=VN_Class))+geom_boxplot(alpha=0.8,notch = T)+
     stat_compare_means(ref.group = "Intron",label = "p.format")+
@@ -98,7 +98,7 @@ my_comparisons <- list( c("STREME", "KDM"), c("GraphProt", "KDM"), c("RNAProt", 
 
 ## 2.1 AUC Distributions ----
 
-pdf("Figure/AUC_04_AUCs_Boxplot.pdf",height = 5,width = 5)
+pdf("Figure/ENCODE_Dataset/AUC_04_AUCs_Boxplot.pdf",height = 5,width = 5)
 ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable,y=value,fill=variable))+
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
   stat_compare_means(comparisons = my_comparisons,method="wilcox",paired=TRUE)+
@@ -108,7 +108,7 @@ dev.off()
 
 ## 2.2 AUC Distributions ~ CLUSTERS----
 med<-all_auc_m%>%filter(!is.na(VN_Class))%>%group_by(variable, VN_Class)%>%summarise(median = median(value, na.rm = TRUE), .groups = "drop") %>%group_by(VN_Class) %>%filter(median == max(median)) %>%ungroup()
-pdf("Figure/AUC_05_AUCs_Boxplot_Clusters.pdf",height = 10,width = 10)
+pdf("Figure/ENCODE_Dataset/AUC_05_AUCs_Boxplot_Clusters.pdf",height = 10,width = 10)
 ggplot(all_auc_m%>%filter(!is.na(VN_Class))%>%mutate(variable=factor(variable,levels=order)),aes(x=variable,y=value,fill=variable))+
   geom_hline(data = med, aes(yintercept = median),linetype = "dashed")+
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
@@ -119,7 +119,7 @@ dev.off()
 
 ## 2.3 AUC Distributions ~ N.PEAKS----
 med<-all_auc_m%>%group_by(variable, N.Class)%>%summarise(median = median(value, na.rm = TRUE), .groups = "drop") %>%group_by(N.Class) %>%filter(median == max(median)) %>%ungroup()
-pdf("Figure/AUC_06_AUCs_Boxplot_nPeaks.pdf",height = 10,width = 10)
+pdf("Figure/ENCODE_Dataset/AUC_06_AUCs_Boxplot_nPeaks.pdf",height = 10,width = 10)
 ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable,y=value,fill=variable))+
   geom_hline(data = med, aes(yintercept = median),linetype = "dashed")+
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
@@ -130,7 +130,7 @@ dev.off()
 
 ## 2.4 AUC Distributions ~ Cell----
 med<-all_auc_m%>%group_by(variable, cell)%>%summarise(median = median(value, na.rm = TRUE), .groups = "drop") %>%group_by(cell) %>%filter(median == max(median)) %>%ungroup()
-pdf("Figure/AUC_07_AUCs_Boxplot_Cell.pdf",height = 5,width = 7)
+pdf("Figure/ENCODE_Dataset/AUC_07_AUCs_Boxplot_Cell.pdf",height = 5,width = 7)
 ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable,y=value,fill=variable))+
   geom_hline(data = med, aes(yintercept = median),linetype = "dashed")+
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
