@@ -8,7 +8,7 @@ if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM
 
 # 1. AUCs with KDM ----
 
-aucs=readRDS("Rdata/AUC_KDM.rds")%>%mutate(ID=paste0(target,"_",cell))%>%
+aucs=readRDS("Rdata/ENCODE_Dataset/AUC_KDM.rds")%>%mutate(ID=paste0(target,"_",cell))%>%
   select(-Train_AUC,-Train_N.Motifs,-Test_AUC,-Test_N.Motifs)%>%
   rename(Train_AUC=Train_AUC_Windows,Train_N.Motifs=Train_N.Motifs_Windows,Test_AUC=Test_AUC_Windows,Test_N.Motifs=Test_N.Motifs_Windows)%>%
   mutate(ratio=log10(Train_AUC/Test_AUC))
@@ -59,7 +59,7 @@ dev.off()
 
 ## 1.3 VAN NOSTRAND CLUSTERS----
 colors_vn=c("Intron"="#2DAEE0","5ss"="#7D619A","Non-coding Exon"="#F8AE1A","3'UTR + CDS"="#197C3F","CDS"="#31AF47","CDS + other"="#8FC349")
-vn=readRDS("Rdata/VN_clusters.rds")
+vn=readRDS("Rdata/ENCODE_Dataset/VN_clusters.rds")
 aucs=merge(aucs,vn%>%select(ID,VN_Class),by="ID",all.x = T)
 
 pdf("Figure/ENCODE_Dataset/AUC_03_VanNostrand_Clusters.pdf",width = 15,height = 5)
@@ -82,8 +82,8 @@ dev.off()
 
 # 2. COMPARISON with other methods ----
 
-all_auc=readRDS("Rdata/AUC_Comparison.rds")
-exp_info=readRDS("Rdata/exp_info.rds")
+all_auc=readRDS("Rdata/ENCODE_Dataset/AUC_Comparison.rds")
+exp_info=readRDS("Rdata/ENCODE_Dataset/exp_info.rds")
 all_auc$nTrainPeaks=exp_info$nTrainPeaks
 all_auc$target=exp_info$target
 all_auc$cell=exp_info$cell
