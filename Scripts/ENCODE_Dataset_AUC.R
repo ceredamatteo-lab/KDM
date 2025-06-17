@@ -138,3 +138,37 @@ ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable
   theme_bw()+theme(axis.title.x=element_blank(),axis.title.y=element_text(angle=0,vjust=0.5),panel.grid=element_blank())+
   ylab("AUC")+facet_wrap(~cell,scales = "free")+ggtitle("AUC distributions ~ Cell.line")
 dev.off()
+
+
+## 2.5 Correlation AUC~N.Peaks
+
+coefs<-all_auc_m %>%group_by(variable) %>%
+  do({
+    model <- lm(value ~ nTrainPeaks, data = .)
+    data.frame(slope = coef(model)[2], intercept = coef(model)[1])
+  })
+
+kdm<-coefs %>% filter(variable == "KDM")
+graphprot<-coefs %>% filter(variable == "GraphProt")
+rnaprot<-coefs %>% filter(variable == "RNAProt")
+
+intersect_x<-function(a1, b1, a2, b2){ 
+  x0 <- (b2 - b1) / (a1 - a2)
+  return(x0)}
+
+x1 = intersect_x(kdm$slope, kdm$intercept, graphprot$slope, graphprot$intercept)
+x2 = intersect_x(kdm$slope, kdm$intercept, rnaprot$slope, rnaprot$intercept)
+
+pdf("Figure/ENCODE_Dataset/AUC_08_AUCs_Correlation.pdf",height = 6,width = 8)
+ggarrange(
+  ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=nTrainPeaks,y=value,col=variable))+stat_cor(show.legend = F)+
+    geom_smooth(method='lm',alpha=0.2)+theme_bw()+theme(axis.title.x = element_blank())+
+    geom_segment(x = x1, xend = x1, y = -Inf, yend = kdm$slope * x1 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
+    geom_segment(x = x2, xend = x2, y = -Inf, yend = kdm$slope * x2 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
+    ylab("AUC")
+  ,
+  ggplot(data.frame(nTrainPeaks=all_auc%>%arrange(nTrainPeaks)%>%pull(nTrainPeaks))%>%mutate(Percentile=seq(1,250)/250),
+         aes(x=nTrainPeaks,y=Percentile))+annotate(geom = "rect",xmin = x1,xmax = x2,ymin = -Inf,ymax=Inf,fill="#C77CFF",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
+    geom_line(col="black",lwd=0.5)+theme_bw(),
+  align = "hv",ncol=1,heights = c(6,4))
+dev.off()
