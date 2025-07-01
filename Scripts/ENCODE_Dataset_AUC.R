@@ -2,9 +2,10 @@ library(reshape2)
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
+library(scales)
 
 if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
-
+kdm_color="gold"
 
 # 1. AUCs with KDM ----
 
@@ -16,8 +17,10 @@ aucs=readRDS("Rdata/ENCODE_Dataset/AUC_KDM.rds")%>%mutate(ID=paste0(target,"_",c
 ## 1.1 TRAIN and TEST ----
 
 pdf("Figure/ENCODE_Dataset/AUC_01_TRAIN_and_TEST.pdf",width = 10,height = 5)
-ggarrange(ggplot(aucs,aes(x=Train_AUC,y=Test_AUC))+geom_point()+stat_cor()+ggtitle("TRAIN AUC vs TEST AUC")+theme_bw(),
+ggarrange(ggplot(aucs,aes(x=Train_AUC,y=Test_AUC))+geom_smooth(method = "lm")+geom_point()+stat_cor()+ggtitle("TRAIN AUC vs TEST AUC")+theme_bw()+
+            theme(axis.title.y=element_text(angle=0,vjust=0.5))+xlab("Train vs Test AUC")+ylab("Test vs Train AUC"),
           ggplot(aucs,aes(x=nTrainPeaks,y=abs(ratio)))+
+            #geom_smooth(method = "lm")+
             geom_point()+scale_x_log10()+
             stat_cor()+ggtitle("TRAIN/TEST RATIO vs N.PEAKS")+theme_bw()+
             ylab(expression(abs(log[10](frac(TRAIN, TEST)))))+theme(axis.title.y=element_text(angle=0,vjust=0.5))+xlab("Input peaks"),
@@ -43,14 +46,17 @@ ggarrange(
     #geom_text(data=aucs%>%group_by(cell)%>%summarise(n=n()),aes(label=n),y=1)+
     scale_y_log10()+ggtitle("N.Peaks ~ cell.line")+ylab("Input peaks"),
   
-  ggplot(aucs,aes(x=nTrainPeaks,y=AUC))+geom_point(aes(fill=cell),col="black",shape=21,size=3)+
+  ggplot(aucs,aes(x=nTrainPeaks,y=AUC))+geom_smooth(method = "lm")+geom_point(aes(fill=cell),col="black",shape=21,size=3)+
     scale_x_log10()+stat_cor()+theme_bw()+scale_fill_manual(values = colors_cell)+ggtitle("AUCS ~ N.Peaks")+xlab("Input peaks"),
   
-  ggplot(aucs,aes(x=nTrainPeaks,y=N.Motifs))+geom_point(aes(fill=cell),col="black",shape=21,size=3)+scale_x_log10()+stat_cor()+theme_bw()+scale_fill_manual(values = colors_cell)+ggtitle("N.Motifs ~ N.Peaks")+xlab("Input peaks"),
-  ggplot(aucs,aes(x=N.Motifs,y=AUC))+geom_point(aes(fill=cell),col="black",shape=21,size=3)+stat_cor()+theme_bw()+scale_fill_manual(values = colors_cell)+ggtitle("AUCS ~ N.Motifs"),
+  ggplot(aucs,aes(x=nTrainPeaks,y=N.Motifs))+geom_smooth(method = "lm")+geom_point(aes(fill=cell),col="black",shape=21,size=3)+
+    scale_x_log10()+stat_cor()+theme_bw()+scale_fill_manual(values = colors_cell)+ggtitle("N.Motifs ~ N.Peaks")+xlab("Input peaks"),
   
-  ggplot(dcast(aucs,target~cell,value.var = "AUC",fun.aggregate = mean),aes(x=HepG2,y=K562))+
-    geom_abline(slope = 1, intercept = 0, linetype = "dashed")+geom_point(size=3)+stat_cor()+theme_bw()+
+  ggplot(aucs,aes(x=N.Motifs,y=AUC))+geom_smooth(method = "lm")+geom_point(aes(fill=cell),col="black",shape=21,size=3)+stat_cor()+
+    theme_bw()+scale_fill_manual(values = colors_cell)+ggtitle("AUCS ~ N.Motifs"),
+  
+  ggplot(dcast(aucs,target~cell,value.var = "AUC",fun.aggregate = mean),aes(x=HepG2,y=K562))+geom_smooth(method = "lm")+
+    geom_point(size=3)+stat_cor()+theme_bw()+
     ggtitle(paste0("RBP on both cell.line (n=",nrow(dcast(aucs,target~cell,value.var = "AUC",fun.aggregate = mean)%>%filter(!is.na(HepG2),!is.na(K562))),")")), 
   align ="hv"
 )
@@ -96,6 +102,10 @@ all_auc_m$value[all_auc_m$value==0]<-NA
 order=as.character(all_auc_m%>%group_by(variable)%>%summarise(median=median(value,na.rm=T))%>%arrange(median)%>%pull(variable))
 my_comparisons <- list( c("STREME", "KDM"), c("GraphProt", "KDM"), c("RNAProt", "KDM") )
 
+colors_fill=c("gold",hue_pal()(length(levels(all_auc_m$variable))-1))
+names(colors_fill)[1]="KDM"
+names(colors_fill)[-1]=levels(all_auc_m$variable)[which(levels(all_auc_m$variable)!="KDM")]
+
 ## 2.1 AUC Distributions ----
 
 pdf("Figure/ENCODE_Dataset/AUC_04_AUCs_Boxplot.pdf",height = 5,width = 5)
@@ -103,7 +113,7 @@ ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
   stat_compare_means(comparisons = my_comparisons,method="wilcox",paired=TRUE)+
   theme_bw()+theme(axis.title.x=element_blank(),axis.title.y=element_text(angle=0,vjust=0.5),panel.grid=element_blank())+
-  ylab("AUC")
+  ylab("AUC")+scale_fill_manual(values = colors_fill)
 dev.off()
 
 ## 2.2 AUC Distributions ~ CLUSTERS----
@@ -114,7 +124,7 @@ ggplot(all_auc_m%>%filter(!is.na(VN_Class))%>%mutate(variable=factor(variable,le
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
   stat_compare_means(comparisons = my_comparisons,method="wilcox",paired=TRUE)+
   theme_bw()+theme(axis.title.x=element_blank(),axis.title.y=element_text(angle=0,vjust=0.5),panel.grid=element_blank())+
-  ylab("AUC")+facet_wrap(~VN_Class,scales = "free")+ggtitle("AUC distributions ~ VN_Classes")
+  ylab("AUC")+facet_wrap(~VN_Class,scales = "free")+ggtitle("AUC distributions ~ VN_Classes")+scale_fill_manual(values = colors_fill)
 dev.off()
 
 ## 2.3 AUC Distributions ~ N.PEAKS----
@@ -125,7 +135,7 @@ ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
   stat_compare_means(comparisons = my_comparisons,method="wilcox",paired=TRUE)+
   theme_bw()+theme(axis.title.x=element_blank(),axis.title.y=element_text(angle=0,vjust=0.5),panel.grid=element_blank())+
-  ylab("AUC")+facet_wrap(~N.Class,scales = "free")+ggtitle("AUC distributions ~ N.Peaks (1st,2nd,3rd,4th quartile)")
+  ylab("AUC")+facet_wrap(~N.Class,scales = "free")+ggtitle("AUC distributions ~ N.Peaks (1st,2nd,3rd,4th quartile)")+scale_fill_manual(values = colors_fill)
 dev.off()
 
 ## 2.4 AUC Distributions ~ Cell----
@@ -136,7 +146,7 @@ ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable
   geom_boxplot(aes(fill=variable),width=0.5,notch=T,show.legend=F,alpha=1)+
   stat_compare_means(comparisons = my_comparisons,method="wilcox",paired=TRUE)+
   theme_bw()+theme(axis.title.x=element_blank(),axis.title.y=element_text(angle=0,vjust=0.5),panel.grid=element_blank())+
-  ylab("AUC")+facet_wrap(~cell,scales = "free")+ggtitle("AUC distributions ~ Cell.line")
+  ylab("AUC")+facet_wrap(~cell,scales = "free")+ggtitle("AUC distributions ~ Cell.line")+scale_fill_manual(values = colors_fill)
 dev.off()
 
 
@@ -165,10 +175,10 @@ ggarrange(
     geom_smooth(method='lm',alpha=0.2)+theme_bw()+theme(axis.title.x = element_blank())+
     geom_segment(x = x1, xend = x1, y = -Inf, yend = kdm$slope * x1 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
     geom_segment(x = x2, xend = x2, y = -Inf, yend = kdm$slope * x2 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
-    ylab("AUC")
+    ylab("AUC")+scale_color_manual(values = colors_fill)
   ,
   ggplot(data.frame(nTrainPeaks=all_auc%>%arrange(nTrainPeaks)%>%pull(nTrainPeaks))%>%mutate(Percentile=seq(1,250)/250),
-         aes(x=nTrainPeaks,y=Percentile))+annotate(geom = "rect",xmin = x1,xmax = x2,ymin = -Inf,ymax=Inf,fill="#C77CFF",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
+         aes(x=nTrainPeaks,y=Percentile))+annotate(geom = "rect",xmin = x1,xmax = x2,ymin = -Inf,ymax=Inf,fill="gold",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
     geom_line(col="black",lwd=0.5)+theme_bw(),
   align = "hv",ncol=1,heights = c(6,4))
 dev.off()
