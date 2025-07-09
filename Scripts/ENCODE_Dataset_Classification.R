@@ -91,6 +91,60 @@ dev.off()
 
 
 
+## 4. Jaccard Index ----
+### 4,1 classification vs mCross ----
+jaccard_plot=list()
+for (c in unique(class_1$method)){
+  if(c=="STREME"){next}
+  tmp=subset(class_1,method!=c)%>%mutate(ID=paste0(target,"_",cell),ID2=paste0(ID,"_",method),
+                                         append=ifelse(duplicated(ID2),".1",""),ID=paste0(ID,append))
+  tmp=dcast(tmp,ID~method,value.var = "class")
+  n1=colnames(tmp)[2]
+  n2=colnames(tmp)[3]
+  tmp=data.frame(table(tmp[,2],tmp[,3]))%>%
+    mutate(Var1=factor(Var1,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")),
+           Var2=factor(Var2,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
+  tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
+  tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
+  tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+  
+  jaccard_plot[[length(jaccard_plot)+1]]=ggplot(tmp,aes(x=Var1,y=Var2,fill=Jaccard))+
+    scale_y_discrete(limits=rev)+
+    geom_point(col="black",shape=21,size=9)+
+    coord_equal()+
+    geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
+    theme(panel.grid = element_blank())+xlab(n1)+ylab(n2)
+}
+
+pdf("Figure/ENCODE_Dataset/Classification_04_Jaccard_mCross.pdf",height = 10,width = 10)
+ggarrange(plotlist = jaccard_plot,ncol = 1,align = "hv")
+dev.off()
+
+### 4.2 classification vs our reference ----
+tmp=class_2%>%mutate(ID=paste0(target,"_",cell),ID2=paste0(ID,"_",method),
+                                       append=ifelse(duplicated(ID2),".1",""),ID=paste0(ID,append))
+tmp=dcast(tmp,ID~method,value.var = "class")
+n1=colnames(tmp)[2]
+n2=colnames(tmp)[3]
+tmp=data.frame(table(tmp[,2],tmp[,3]))%>%
+  mutate(Var1=factor(Var1,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")),
+         Var2=factor(Var2,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
+tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
+tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
+tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+
+p=ggplot(tmp,aes(x=Var1,y=Var2,fill=Jaccard))+
+  #geom_tile(col="black")+
+  scale_y_discrete(limits=rev)+
+  geom_point(col="black",shape=21,size=9)+
+  coord_equal()+
+  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
+  theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1))+xlab(n1)+ylab(n2)
+
+pdf("Figure/ENCODE_Dataset/Classification_04_Jaccard_ourReference.pdf",height = 5,width = 5)
+p
+dev.off()
+
 # B: Cell line info ----
 
 classification=readRDS("Rdata/ENCODE_Dataset/classification_new.rds")
@@ -176,49 +230,55 @@ dev.off()
 
 
 ## 4 Jaccard Index ----
-return_jacccard=function(a,b){
-  l1=length(a)
-  l2=length(b)
-  l3=sum(a%in%b)
-  return(l3/(l1+l2-l3))
+### 4,1 classification vs mCross ----
+jaccard_plot=list()
+for (c in unique(class_1$method)){
+  if(c=="STREME"){next}
+  tmp=subset(class_1,method!=c)%>%mutate(ID=paste0(target,"_",cell),ID2=paste0(ID,"_",method),
+                                         append=ifelse(duplicated(ID2),".1",""),ID=paste0(ID,append))
+  tmp=dcast(tmp,ID~method,value.var = "class")
+  n1=colnames(tmp)[2]
+  n2=colnames(tmp)[3]
+  tmp=data.frame(table(tmp[,2],tmp[,3]))%>%
+    mutate(Var1=factor(Var1,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")),
+           Var2=factor(Var2,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
+  tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
+  tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
+  tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+  
+  jaccard_plot[[length(jaccard_plot)+1]]=ggplot(tmp,aes(x=Var1,y=Var2,fill=Jaccard))+
+    scale_y_discrete(limits=rev)+
+    geom_point(col="black",shape=21,size=9)+
+    coord_equal()+
+    geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
+    theme(panel.grid = element_blank())+xlab(n1)+ylab(n2)
 }
 
-result_jaccard=rbind()
-for(c in unique(class_1$class)){
-  sel=subset(class_1,class==c)%>%mutate(ID=paste0(target,"_",cell))
-  kdm=unique(subset(sel,method=="KDM")$ID)
-  kdmr=unique(subset(sel,method=="KDM_reduced")$ID)
-  str=unique(subset(sel,method=="STREME")$ID)
-  result_jaccard=rbind(result_jaccard,c(c,"KDM-KDMR",return_jacccard(kdm,kdmr)))
-  result_jaccard=rbind(result_jaccard,c(c,"KDM-STREME",return_jacccard(kdm,str)))
-  result_jaccard=rbind(result_jaccard,c(c,"KDMR-STREME",return_jacccard(kdmr,str)))
-}
-result_jaccard=data.frame(result_jaccard)
-colnames(result_jaccard)=c("class","pair","jaccard")
-result_jaccard=result_jaccard%>%mutate(jaccard=as.numeric(jaccard),class=factor(class,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
+pdf("Figure/ENCODE_Dataset/Classification_04_Jaccard_mCross_CellLine.pdf",height = 10,width = 10)
+ggarrange(plotlist = jaccard_plot,ncol = 1,align = "hv")
+dev.off()
 
-ggplot(result_jaccard,aes(x=class,y=jaccard,fill=class))+geom_bar(stat="identity",col="black")+
-  facet_grid(~pair)+theme_bw() +
-  theme(axis.title = element_blank(),panel.grid = element_blank(),plot.title = element_text(size = 10)) +
-  scale_fill_manual(values = colors)+geom_text(aes(label=round(jaccard,2)),vjust=-1)
+### 4.2 classification vs our reference ----
+tmp=class_2%>%mutate(ID=paste0(target,"_",cell),ID2=paste0(ID,"_",method),
+                     append=ifelse(duplicated(ID2),".1",""),ID=paste0(ID,append))
+tmp=dcast(tmp,ID~method,value.var = "class")
+n1=colnames(tmp)[2]
+n2=colnames(tmp)[3]
+tmp=data.frame(table(tmp[,2],tmp[,3]))%>%
+  mutate(Var1=factor(Var1,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")),
+         Var2=factor(Var2,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
+tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
+tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
+tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
 
+p=ggplot(tmp,aes(x=Var1,y=Var2,fill=Jaccard))+
+  #geom_tile(col="black")+
+  scale_y_discrete(limits=rev)+
+  geom_point(col="black",shape=21,size=9)+
+  coord_equal()+
+  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
+  theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1))+xlab(n1)+ylab(n2)
 
-result_jaccard=rbind()
-for(c in unique(class_2$class)){
-  sel=subset(class_2,class==c)%>%mutate(ID=paste0(target,"_",cell))
-  kdm=unique(subset(sel,method=="KDM")$ID)
-  str=unique(subset(sel,method=="STREME")$ID)
-  result_jaccard=rbind(result_jaccard,c(c,"KDM-STREME",return_jacccard(kdm,str)))
-}
-result_jaccard=data.frame(result_jaccard)
-colnames(result_jaccard)=c("class","pair","jaccard")
-result_jaccard=result_jaccard%>%mutate(jaccard=as.numeric(jaccard),class=factor(class,levels=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match","No central motif","Not in reference")))
-
-ggplot(result_jaccard,aes(x=class,y=jaccard,fill=class))+geom_bar(stat="identity",col="black")+
-  facet_grid(~pair)+theme_bw() +
-  theme(axis.title = element_blank(),panel.grid = element_blank(),plot.title = element_text(size = 10)) +
-  scale_fill_manual(values = colors)+geom_text(aes(label=round(jaccard,2)),vjust=-1)
-
-tmp=subset(class_1,method!="KDM")%>%mutate(ID=paste0(target,"_",cell))
-
-
+pdf("Figure/ENCODE_Dataset/Classification_04_Jaccard_ourReference_CellLine.pdf",height = 5,width = 5)
+p
+dev.off()
