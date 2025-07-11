@@ -182,3 +182,12 @@ ggarrange(
     geom_line(col="black",lwd=0.5)+theme_bw(),
   align = "hv",ncol=1,heights = c(6,4))
 dev.off()
+
+
+ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=nTrainPeaks,y=value,col=variable))+stat_cor(show.legend = F)+
+    geom_smooth(method='lm',alpha=0.2)+theme_bw()+theme(axis.title.x = element_blank())+
+    geom_segment(x = x1, xend = x1, y = -Inf, yend = kdm$slope * x1 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
+    geom_segment(x = x2, xend = x2, y = -Inf, yend = kdm$slope * x2 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
+    ylab("AUC")+scale_color_manual(values = colors_fill)+
+    geom_point()+scale_x_log10()
+
