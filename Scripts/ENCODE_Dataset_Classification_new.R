@@ -4,6 +4,9 @@ library(ggpubr)
 library(RColorBrewer)
 library(dplyr)
 
+
+if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
+
 ## FUNCTIONS ## 
 get_binom_test=function(data,condition,adjust=TRUE){
 	data$p.val=NA
@@ -133,9 +136,8 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 	  
 }
 
-## TF ##
+## TF ----
 
-setwd("/adat/Progetti/KDM/MATERIALE/TF/CLASSIFICAZIONE")
 
 load("class_all_fb_hocomoco_kdmtom.Rdata")
 load("class_all_fb_hocomoco_tomtom.Rdata")
@@ -180,20 +182,20 @@ ggarrange(plotlist=p4)
 
 
 
-## RBP ##
-setwd("/adat/Progetti/KDM/MATERIALE/RBP/CLASSIFICAZIONE")
-tt1=readRDS("class_all_cisbp_mcross.rds")
-tt2=readRDS("class_sel_ENCODE_mCross.rds")[,-2]
-tt3=readRDS("class_sel_ENCODE_mCross.rds")[,-1]
-tt4=readRDS("class_sel_ENCODE_reference.rds")
+## RBP ----
 
-p1<-plotClassification(tt1,"KDMtom",5)
+tt1=readRDS("Rdata/ENCODE_Dataset/class_all_cisbp_mcross.rds")
+tt2=readRDS("Rdata/ENCODE_Dataset/class_sel_ENCODE_mCross.rds")[,-2]
+tt3=readRDS("Rdata/ENCODE_Dataset/class_sel_ENCODE_mCross.rds")[,-1]
+tt4=readRDS("Rdata/ENCODE_Dataset/class_sel_ENCODE_reference.rds")
+
+p1<-plotClassification(tt1,"KDMtom",5,adjust = T)
 ggarrange(plotlist=p1,nrow=1)
-p2<-plotClassification(tt2,"KDMtom",6)
+p2<-plotClassification(tt2,"KDMtom",6,adjust = T)
 ggarrange(plotlist=p2,nrow=1)
-p3<-plotClassification(tt3,"KDMtom",6)
+p3<-plotClassification(tt3,"KDMtom",6,adjust = T)
 ggarrange(plotlist=p3,nrow=1)
-p4<-plotClassification(tt4,"KDM",7)
+p4<-plotClassification(tt4,"KDM",7,adjust = T)
 ggarrange(plotlist=p4,nrow=1)
 
 
