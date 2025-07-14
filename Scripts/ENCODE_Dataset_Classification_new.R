@@ -138,7 +138,7 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 
 
 
-## RBP no cell line ----
+# RBP no cell line ----
 
 tt1=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_all_cisbp_mcross.rds")
 tt2=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross.rds")[,-2]
@@ -167,7 +167,7 @@ pdf("Figure/ENCODE_Dataset/New_figure/04_kdm_streme_wall.pdf",height = 7,width =
 ggarrange(plotlist=p4,nrow=1)
 dev.off()
 
-## RBP cell line ----
+# RBP cell line ----
 
 tt2=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross_cellLine.rds")[,-2]
 tt3=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross_cellLine.rds")[,-1]
@@ -189,3 +189,10 @@ pdf("Figure/ENCODE_Dataset/New_figure/cell_line_04_kdm_streme_wall.pdf",height =
 ggarrange(plotlist=p4,nrow=1)
 dev.off()
 
+## classificazione filtrata per cell.line ----
+tt3=cbind(tt3,exp_info)
+tt4=cbind(tt4,exp_info)
+p3<-plotClassification(subset(tt3,cell=="K562")[,1:2],"KDMtom",6,adjust = T)
+ggarrange(plotlist=p3,nrow=1)
+p4<-plotClassification(subset(tt4,cell=="K562")[,1:2],"KDM",7,adjust = T)
+ggarrange(plotlist=p4,nrow=1)
