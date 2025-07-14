@@ -7,6 +7,8 @@ library(circlize)
 
 if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
 
+# HEATMAP ANNOVAR ----
+
 annovar=readRDS("Rdata/RBP_24/RBP24_annovar_data.rds")
 annovar=annovar[,-c(grep("nc",colnames(annovar)),grep("intergenic",colnames(annovar)))]
 scaled <- annovar / rowSums(annovar)
@@ -38,6 +40,7 @@ set.seed(30580)
 km <- kmeans(scaled, centers = 5)
 cluster_labels <- factor(km$cluster, labels = c("3'UTR+Intronic", "Intronic","3'UTR","3'UTR+CDS","CDS"))
 
+pdf("Figure/RBP_24/07_ANNOVAR_HEATMAP.pdf",width = 8,height = 8)
 Heatmap(
   scaled,
   name = "Scaled Proportion",
@@ -54,4 +57,4 @@ Heatmap(
     )
   }
 )
-
+dev.off()
