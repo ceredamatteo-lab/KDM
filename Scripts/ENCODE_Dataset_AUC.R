@@ -151,7 +151,7 @@ ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=variable
 dev.off()
 
 
-## 2.5 Correlation AUC~N.Peaks
+## 2.5 Correlation AUC~N.Peaks ----
 
 coefs<-all_auc_m %>%group_by(variable) %>%
   do({
