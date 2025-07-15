@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(scales)
+library(ggstatsplot)
 
 if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
 kdm_color="gold"
@@ -184,10 +185,10 @@ ggarrange(
 dev.off()
 
 
-ggplot(all_auc_m%>%mutate(variable=factor(variable,levels=order)),aes(x=nTrainPeaks,y=value,col=variable))+stat_cor(show.legend = F)+
-    geom_smooth(method='lm',alpha=0.2)+theme_bw()+theme(axis.title.x = element_blank())+
-    geom_segment(x = x1, xend = x1, y = -Inf, yend = kdm$slope * x1 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
-    geom_segment(x = x2, xend = x2, y = -Inf, yend = kdm$slope * x2 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
-    ylab("AUC")+scale_color_manual(values = colors_fill)+
-    geom_point()+scale_x_log10()
+pdf("Figure/ENCODE_Dataset/AUC_08_AUCs_Correlation_ggstat.pdf",height = 8,width = 12)
+grouped_ggscatterstats(data = all_auc_m,x = nTrainPeaks,y=value,type = "parametric",
+                       grouping.var = variable,ylab="AUC",xlab="Number of peaks",
+                       ggplot.component = list(scale_x_log10(),ylim(NA, 1)))
+
+dev.off()
 
