@@ -58,16 +58,26 @@ p4
 dev.off()
 
 
-grouped_ggbetweenstats(data = data$mm,x = variable, y = value,grouping.var = Annovar,
-                       notch = TRUE,results.subtitle = FALSE, subtitle = NULL,ggtheme = ggplot2::theme_minimal(),palette = "Set2")
 
 um=data$um%>%mutate(status=factor(status,levels=c("exonic","splicing","intronic","UTR5","ncRNA_exonic")))
-pA=ggarrange(ggbetweenstats(data=um,x=status,y=X1,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0)),
-          ggbetweenstats(data=um,x=status,y=X2,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0)),ncol =1)
+pA=ggarrange(ggbetweenstats(data=um,x=status,y=X1,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),
+          ggbetweenstats(data=um,x=status,y=X2,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),ncol =1)
+pdf("Figure/ENCODE_Dataset/KDMM/KDMM_05.pdf",width = 10,height = 10)
+pA
+dev.off()
 
-pB=ggplot(um,aes(x=X1,y=X2))+geom_density_2d_filled(show.legend = F,col="black")+facet_wrap(~status, nrow=1)+theme_minimal()+theme(panel.grid = element_blank())
 
-pC=ggplot(data=um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7,show.legend = F)+scale_color_brewer(palette="Set1")+facet_grid(~status)+theme_minimal()
+pB=ggplot(um,aes(x=X1,y=X2))+geom_density_2d_filled(show.legend = F,col="black")+facet_wrap(~status, nrow=1)+theme_minimal()+theme(panel.grid = element_blank())+coord_equal()
+pdf("Figure/ENCODE_Dataset/KDMM/KDMM_06.pdf",width = 10,height = 5)
+pB
+dev.off()
+
+pC=ggplot(data=um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7,show.legend = F)+scale_color_brewer(palette="Set1")+facet_grid(~status)+theme_minimal()+coord_equal()
+pdf("Figure/ENCODE_Dataset/KDMM/KDMM_07.pdf",width = 10,height = 5)
+pC
+dev.off()
+
+
 ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
 
 tmp=subset(data$um,status%in%c("intronic","exonic"))%>%mutate(X=ifelse(X1>0,"right","left"),Y=ifelse(X2>0,"top","bottom"),Quadrante=paste0(X,"-",Y))
@@ -106,6 +116,15 @@ pdf("Figure/ENCODE_Dataset/KDMM/KDMM_04.pdf",width = 7,height = 7)
 p4
 dev.off()
 
+um=data$um
+pA=ggarrange(ggbetweenstats(data=um,x=status,y=X1,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),
+             ggbetweenstats(data=um,x=status,y=X2,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),ncol =1)
 
+pB=ggplot(um,aes(x=X1,y=X2))+geom_density_2d_filled(show.legend = F,col="black")+facet_wrap(~status, nrow=1)+theme_minimal()+theme(panel.grid = element_blank())+coord_equal()
+
+pC=ggplot(data=um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7,show.legend = F)+scale_color_brewer(palette="Set1")+facet_grid(~status)+theme_minimal()+coord_equal()
+
+
+ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
 
 
