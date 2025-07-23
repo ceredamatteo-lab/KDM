@@ -7,6 +7,7 @@ library(ggstatsplot)
 
 if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
 kdm_color="gold"
+colors_cell=c("HepG2"="chocolate1","K562"="orchid")
 
 # 1. AUCs with KDM ----
 
