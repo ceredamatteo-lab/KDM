@@ -112,38 +112,72 @@ p2<-ggplot(data=data$info3,aes(x=x,y=prob,fill=name)) + geom_bar(position="stack
 
 #p2=ggplot(data=data$info3,aes(x=x,y=prob,color=name, fill=name))+geom_area(aes(group=name), alpha=0.8, position="stack",col="black")+facet_grid(plt~.,scale="free_y")+theme_minimal()+ scale_fill_manual(values=cscale)
 
-p3=grouped_ggbetweenstats(data = data$mm,x = status, y = value,grouping.var = Var2,
-                          notch = TRUE,results.subtitle = FALSE, subtitle = NULL,centrality.plotting=F,ggtheme = ggplot2::theme_minimal(),palette = "Set2")
-p4<-ggplot(data=data$um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7)+scale_color_brewer(palette="Set1")
+mm=data$mm
+p3A=grouped_ggbetweenstats(data = mm,x = status, y = value,grouping.var = Var2,
+                           results.subtitle = FALSE, subtitle = NULL,centrality.plotting=T,
+                           ggtheme = ggplot2::theme_bw(),
+                           boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0),
+                           centrality.point.args = list(size = 2, color = "darkred"),
+                           ggplot.component=list(theme(axis.title=element_blank())),plotgrid.args = list(nrow = 2))
+p3B=grouped_ggbetweenstats(data = mm,x = Var2, y = value,grouping.var = status,
+                           results.subtitle = FALSE, subtitle = NULL,centrality.plotting=T,
+                           ggtheme = ggplot2::theme_bw(),
+                           boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0),
+                           centrality.point.args = list(size = 2, color = "darkred"),
+                           ggplot.component=list(theme(axis.title=element_blank())),plotgrid.args = list(nrow = 1))
 
 
-ggarrange(ggarrange(p1,p2,ncol=2,widths=c(1,3)),ggarrange(p3,p4,ncol=2,widths=c(3,1)),nrow=2,heights = c(4,6))
 
-pdf("Figure/ENCODE_Dataset/KDMM/KDMM_01.pdf",width = 7,height = 7)
+p4<-ggplot(data=data$um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7)+scale_color_brewer(palette="Set1")+theme_minimal()
+
+
+#ggarrange(ggarrange(p1,p2,ncol=2,widths=c(1,3)),ggarrange(p3,p4,ncol=2,widths=c(3,1)),nrow=2,heights = c(4,6))
+
+pdf("Figure/DNA/KDMM/KDMM_01.pdf",width = 7,height = 7)
 p1
 dev.off()
 
-pdf("Figure/ENCODE_Dataset/KDMM/KDMM_02.pdf",width = 10,height = 5)
+pdf("Figure/DNA/KDMM/KDMM_02.pdf",width = 10,height = 5)
 p2
 dev.off()
 
-pdf("Figure/ENCODE_Dataset/KDMM/KDMM_03.pdf",width = 15,height = 5)
-p3
+pdf("Figure/DNA/KDMM/KDMM_03A.pdf",width = 20,height = 10)
+p3A
 dev.off()
 
-pdf("Figure/ENCODE_Dataset/KDMM/KDMM_04.pdf",width = 7,height = 7)
+pdf("Figure/DNA/KDMM/KDMM_03B.pdf",width =20,height = 10)
+p3B
+dev.off()
+
+pdf("Figure/DNA/KDMM/KDMM_04.pdf",width = 7,height = 7)
 p4
 dev.off()
 
-um=data$um
-pA=ggarrange(ggbetweenstats(data=um,x=status,y=X1,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),
-             ggbetweenstats(data=um,x=status,y=X2,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0)),ncol =1)
+um=data$um%>%rename(Dim.1=X1,Dim.2=X2)
+pA=ggarrange(
+  ggbetweenstats(data=um,x=status,y=Dim.1,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,ggtheme = ggplot2::theme_bw(),
+                 boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0),
+                 centrality.point.args = list(size = 2, color = "darkred")),
+  ggbetweenstats(data=um,x=status,y=Dim.2,package = "RColorBrewer",palette = "Set1",results.subtitle = FALSE, subtitle = NULL,ggtheme = ggplot2::theme_bw(),
+                 boxplot.args = list(notch=TRUE,width=0.2),point.args = list(alpha=0),violin.args = list(width = 0, linewidth = 0),
+                 centrality.point.args = list(size = 2, color = "darkred")),
+  ncol =1,align = "h")
 
-pB=ggplot(um,aes(x=X1,y=X2))+geom_density_2d_filled(show.legend = F,col="black")+facet_wrap(~status, nrow=1)+theme_minimal()+theme(panel.grid = element_blank())+coord_equal()
+pdf("Figure/DNA/KDMM/KDMM_05.pdf",width = 10,height = 10)
+pA
+dev.off()
 
-pC=ggplot(data=um,aes(x=X1,y=X2,color=status)) + geom_point(size=0.7,show.legend = F)+scale_color_brewer(palette="Set1")+facet_grid(~status)+theme_minimal()+coord_equal()
+pB=ggplot(um,aes(x=Dim.1,y=Dim.2))+geom_density_2d_filled(show.legend = F,col="black")+facet_wrap(~status, nrow=1)+theme_minimal()+theme(panel.grid = element_blank())+coord_equal()
+pdf("Figure/DNA/KDMM/KDMM_06.pdf",width = 10,height = 5)
+pB
+dev.off()
+
+pC=ggplot(data=um,aes(x=Dim.1,y=Dim.2,color=status)) + geom_point(size=0.7,show.legend = F)+scale_color_brewer(palette="Set1")+facet_grid(~status)+theme_minimal()+coord_equal()
+pdf("Figure/DNA/KDMM/KDMM_07.pdf",width = 10,height = 5)
+pC
+dev.off()
 
 
-ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
+#ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
 
 
