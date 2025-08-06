@@ -53,7 +53,7 @@ p3B=grouped_ggbetweenstats(data = mm,x = variable, y = value,grouping.var = Anno
                            ggplot.component=list(theme(axis.title=element_blank())),plotgrid.args = list(nrow = 1))
 
 um=data$um%>%mutate(status=factor(status,levels=annovar_order))%>%rename(Dim.1=X1,Dim.2=X2)
-p4<-ggplot(data=um,aes(x=Dim.1,y=Dim.2,color=status)) + geom_point(size=0.7)+scale_color_brewer(palette="Set1")+theme_minimal()
+p4<-ggplot(data=um,aes(x=Dim.1,y=Dim.2,color=status)) + geom_point(size=0.7)+scale_color_brewer(palette="Set1")+theme_minimal()+coord_equal()
 
 #ggarrange(ggarrange(p1,p2,ncol=2,widths=c(1,3)),ggarrange(p3,p4,ncol=2,widths=c(3,1)),nrow=2,heights = c(4,6))
 
@@ -101,7 +101,7 @@ pdf(paste0("Figure/ENCODE_Dataset/KDMM/",exp,"_KDMM_07.pdf"),width = 10,height =
 pC
 dev.off()
 
-#ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
+ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
 
 # TF ----
 data=readRDS("Rdata/KDMM_plot_TF.rds")
@@ -178,6 +178,6 @@ pC
 dev.off()
 
 
-#ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
+ggarrange(pA,pB,pC,ncol = 1,align = "hv",heights = c(4,2,4))
 
 
