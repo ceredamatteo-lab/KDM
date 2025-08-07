@@ -141,9 +141,9 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 # RBP no cell line ----
 
 tt1=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_all_cisbp_mcross.rds")
-tt2=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross.rds")[,-2]
-tt3=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross.rds")[,-1]
-tt4=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_reference.rds")
+tt2=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross.rds")[,c(3,1)]
+tt3=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_mCross.rds")[,c(3,2)]
+tt4=readRDS("Rdata/ENCODE_Dataset/CLASSIFICAZIONE/class_sel_ENCODE_reference.rds")[,c(2,1)]
 
 p1<-plotClassification(tt1,"KDMtom",5,adjust = T)
 p2<-plotClassification(tt2,"KDMtom",6,adjust = T)
