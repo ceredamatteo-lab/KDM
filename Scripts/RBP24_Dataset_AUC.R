@@ -2,6 +2,7 @@ library(reshape2)
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
+library(RColorBrewer)
 
 if(Sys.info()['user'] == "tbecchi"){setwd("/Users/tbecchi/Desktop/repository/KDM/")}
 
