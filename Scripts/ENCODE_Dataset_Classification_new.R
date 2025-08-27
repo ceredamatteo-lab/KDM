@@ -61,16 +61,16 @@ get_summary=function(data,motifs,reference,tool,classes_sel){
   return(mm)
 }
 
-get_jaccard=function(data,classes_sel){
-  tmp=data.frame(table(data[,1],data[,2]))%>%
-    mutate(Var1=factor(Var1,levels=classes_sel),
-           Var2=factor(Var2,levels=classes_sel))
-  tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
-  tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
-  tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
-  
-  return(tmp)
-}
+#get_jaccard=function(data,classes_sel){
+#  tmp=data.frame(table(data[,1],data[,2]))%>%
+#    mutate(Var1=factor(Var1,levels=classes_sel),
+#           Var2=factor(Var2,levels=classes_sel))
+#  tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
+#  tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
+#  tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+#  
+#  return(tmp)
+#}
 
 
 get_jaccard=function(data,classes_sel){
