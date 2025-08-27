@@ -72,6 +72,26 @@ get_jaccard=function(data,classes_sel){
   return(tmp)
 }
 
+
+get_jaccard=function(data,classes_sel){
+  all_combos <- expand.grid(
+    Var1 = classes_sel,
+    Var2 = classes_sel
+  )
+  
+  tmp <- data %>%
+    count(Var1 = factor(.[[1]], levels = classes_sel),
+          Var2 = factor(.[[2]], levels = classes_sel)) %>%
+    right_join(all_combos, by = c("Var1","Var2")) %>%
+    mutate(Freq = ifelse(is.na(n), 0, n))
+  
+  tmp <- tmp %>%
+    group_by(Var1) %>% mutate(tot.Var1 = sum(Freq)) %>% ungroup() %>%
+    group_by(Var2) %>% mutate(tot.Var2 = sum(Freq)) %>% ungroup() %>%
+    mutate(Jaccard = Freq / (tot.Var1 + tot.Var2 - Freq))
+return(tmp)
+}
+
 plotClassification<-function(data,condition,sel,adjust=TRUE){
   classes=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match to target","No central motifs","Target not in reference")
   classes_sel=classes[1:sel]
@@ -107,6 +127,7 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
   
   if(ncol(data)==2){
     jaccard=get_jaccard(data,classes_sel)
+    print(jaccard)
     p2=ggplot(jaccard,aes(x=Var1,y=Var2,fill=Jaccard))+
       scale_y_discrete(limits=rev)+
       geom_point(col="black",shape=21,size=9)+
