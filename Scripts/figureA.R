@@ -114,13 +114,13 @@ ss=4842
 p1=kdmFeaturesProfileFromPWMSet(spos2[ss], pwms)[1:281]
 
 tmp=list(data.frame(Pos   = seq_along(p1) - 146 + 5,Score = p1,Method = "PWM"))
-peaks <- which(p1 > 0) - 146 + 5
+peaks <- which(p1 > th2) - 146 + 5
 
 tmp=c(tmp, lapply(seq_along(hws), function(k) {
   data.frame(Pos   = all_pn[[k]]$x,Score = all_pn[[k]]$pfeat[[1]][ss, ],Method = paste0("KDM: hw=", hws[k]))
 }))
 
-ths=c(0, sapply(all_pn, function(x) x$thresholds))
+ths=c(th2, sapply(all_pn, function(x) x$thresholds))
 
 final=do.call(rbind, tmp) %>%mutate(Method = factor(Method, levels = unique(Method)))
 
@@ -230,7 +230,7 @@ pB=ggplot(final, aes(x = Pos, y = Feature, col = type)) +
             x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
     geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure," q.val= ",q.val," (",Score,")")),
             x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+
-    geom_text(data=annot%>%filter(Measure=="Correlation"),aes(y=y,label=paste0(Measure," q.val= ",q.val," (",Score,")")),
+    geom_text(data=annot%>%filter(Measure=="Correlation"),aes(y=y,label=paste0(Measure," p.val= ",q.val," (",Score,")")),
             x=xmax+20,hjust=0,vjust=5,inherit.aes = FALSE,size=3)
             
 
@@ -246,7 +246,7 @@ pwm_feat=pwm_feat[,1:286]
 count = rep(0, ncol(pwm_feat))
 max_col = max.col(pwm_feat, ties.method = "first")
 max_val = apply(pwm_feat, 1, max)
-valid_idx = which(max_val > 0)
+valid_idx = which(max_val > th2)
 tab = table(max_col[valid_idx])
 count[as.integer(names(tab))] = tab
 pos_counts <- count
@@ -259,7 +259,7 @@ pwm_feat=pwm_feat[,1:286]
 count = rep(0, ncol(pwm_feat))
 max_col = max.col(pwm_feat, ties.method = "first")
 max_val = apply(pwm_feat, 1, max)
-valid_idx = which(max_val > 0)
+valid_idx = which(max_val > th2)
 tab = table(max_col[valid_idx])
 count[as.integer(names(tab))] = tab
 neg_counts <- count
@@ -281,7 +281,7 @@ final=do.call(rbind,tmp)
 final=final%>%mutate(Method=factor(Method,levels=unique(final$Method)))
 
 
-pC=ggplot(final,aes(x=Pos,y=Counts,fill=type))+geom_area(alpha=0.5)+
+ggplot(final,aes(x=Pos,y=Counts,fill=type))+geom_area(alpha=0.5)+
 	facet_wrap(~ Method,,ncol=1) +
   scale_fill_manual(values = c("gold", "grey")) +
   theme_bw()+ggtitle("Hits")+
