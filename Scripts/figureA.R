@@ -24,7 +24,7 @@ bdir<-"/tmp/tempres/"
 #system("mkdir /tmp/tempres/")
 
 u=which(exp_info$Experiment=="ENCSR570WLM")
-u=which(exp_info$Experiment=="ENCSR366YOG")
+#u=which(exp_info$Experiment=="ENCSR177QQY")
 
 # SELEZIONE DEL MOTIVO CENTRALE E ARRICCHITO
 
@@ -72,7 +72,7 @@ all_pn <- lapply(hws, function(hw) {
     centers = rep(36, nrow(DATASET[[u]]$train)),
     labels = trainLabels,
     genomeFile = "/adat/Progetti/RBP/RNA_exons/Reference/hg38/hg38.2bit",
-    halfInterval = 140,
+    halfInterval = 140+hw,
     halfWin = hw,
     tolerance = 1e-10,
     strict = FALSE,
@@ -110,7 +110,8 @@ train2$start=train2$start-ex-5
 train2$end=train2$end+ex+10
 seqs2<-kdmGetSequence(train2,file.name="/adat/database/2bit/hg38.2bit")
 spos2<-seqs2[which(trainLabels==1)]
-lims=30
+lims=50
+
 good=c()
 for(ss in 1:length(spos2)){
 	p1=kdmFeaturesProfileFromPWMSet(spos2[ss], pwms)[1:281]
@@ -119,7 +120,7 @@ for(ss in 1:length(spos2)){
 	#if(all(peaks >= -lims & peaks <= lims)==FALSE){next}
 	peaks=peaks[peaks >= -lims & peaks <= 0]
 	#if(length(peaks)>5 | length(peaks)==0){next}
-  if(length(peaks)>6 | length(peaks)<3){next}
+  if(length(peaks)>10 | length(peaks)<=2){next}
 
 	keep=TRUE
 	for(j in 1:4){
@@ -134,7 +135,7 @@ for(ss in 1:length(spos2)){
 
 # A: PROFILO SULLA SINGOLA SEQUENZA
 
-ss=2489
+ss=193
 #p1=kdmFeaturesProfileFromPWMSet(spos2[ss], pwms)[1:281]
 sel_fimo=fimo_pos%>%filter(sequence_name==paste0("P",ss))
 #tmp=list(data.frame(Pos   = seq_along(p1) - 146 + 5,Score = p1,Method = "PWM"))
@@ -243,8 +244,14 @@ annot_list = lapply(seq_along(all_pn), function(k) {
   ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
   ad = (max(ne$Start) - 1) / 2
   ne = transform(ne, Start = Start - ad, End = End - ad)
+  
+  #ne=subset(ne,End-Start!=0)
+  #res<-ne[order(rank(ne$Centrality)+rank(ne$Enrichment),ne$Centrality,decreasing=c(TRUE,TRUE)),]
+  #res=res[1,]
   ne = ne[ne$Start == xmin & ne$End == xmax, ]
   
+  #data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
+  #q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
   data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
   q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
 })
@@ -253,6 +260,7 @@ annot=rbind(annot,cor)
 annot$q.val=round(annot$q.val,4)
 annot$Score=round(annot$Score,2)
 annot$Method   = factor(annot$Method, levels = unique(final$Method))
+
 
 pB=ggplot(final, aes(x = Pos, y = Feature, col = type)) +
   geom_line(lwd=1) +
@@ -273,23 +281,23 @@ pB=ggplot(final, aes(x = Pos, y = Feature, col = type)) +
 # C: HITS POSOTIVE E NEGATIVE
 
 tmp=list()
-compute_pwm_counts <- function(seqs, pwms, th2, max_cols = 286) {
-  pwm_feat <- t(sapply(seqs, function(seq) {
-    kdmFeaturesProfileFromPWMSet(seq, pwms)
-  }))
-  pwm_feat <- pwm_feat[, 1:max_cols, drop = FALSE]
-  count <- rep(0, ncol(pwm_feat))
-  max_col <- max.col(pwm_feat, ties.method = "first")
-  max_val <- apply(pwm_feat, 1, max)
-  valid_idx <- which(max_val > th2)
-  tab <- table(max_col[valid_idx])
-  count[as.integer(names(tab))] <- tab
-  
-  return(count)
-}
+#compute_pwm_counts <- function(seqs, pwms, th2, max_cols = 286) {
+#  pwm_feat <- t(sapply(seqs, function(seq) {
+#    kdmFeaturesProfileFromPWMSet(seq, pwms)
+#  }))
+#  pwm_feat <- pwm_feat[, 1:max_cols, drop = FALSE]
+#  count <- rep(0, ncol(pwm_feat))
+#  max_col <- max.col(pwm_feat, ties.method = "first")
+#  max_val <- apply(pwm_feat, 1, max)
+#  valid_idx <- which(max_val > th2)
+#  tab <- table(max_col[valid_idx])
+#  count[as.integer(names(tab))] <- tab
+#  
+#  return(count)
+#}
 
-pos_counts <- compute_pwm_counts(spos2, pwms, th2)
-neg_counts <- compute_pwm_counts(sneg2, pwms, th2)
+#pos_counts <- compute_pwm_counts(spos2, pwms, th2)
+#neg_counts <- compute_pwm_counts(sneg2, pwms, th2)
 
 tmp[[1]]=rbind(
 fimo_pos%>%group_by(sequence_name)%>%slice_max(order_by = score, n = 1, with_ties = FALSE) %>%
@@ -301,9 +309,9 @@ fimo_neg%>%group_by(sequence_name)%>%slice_max(order_by = score, n = 1, with_tie
 )
 
 
-tmp[[1]]=rbind(
-	data.frame(Pos=seq(1,length(pos_counts))-146+5,Counts=pos_counts,type="Bound",Method="PWM"),
-	data.frame(Pos=seq(1,length(neg_counts))-146+5,Counts=neg_counts,type="Unbound",Method="PWM"))
+#tmp[[1]]=rbind(
+#	data.frame(Pos=seq(1,length(pos_counts))-146+5,Counts=pos_counts,type="Bound",Method="PWM"),
+#	data.frame(Pos=seq(1,length(neg_counts))-146+5,Counts=neg_counts,type="Unbound",Method="PWM"))
 
 for(k in 1:4){
 	pn=all_pn[[k]]
@@ -326,6 +334,8 @@ pC=ggplot(final,aes(x=Pos,y=Counts,fill=type))+geom_area(alpha=0.5)+
   
 library(ggpubr)
 ggarrange(pA,pC,pB,nrow=1,align="h",widths=c(3,4,4))
+
+
 
 
 
