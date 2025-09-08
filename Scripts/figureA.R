@@ -18,18 +18,22 @@ read_centrimo<-function(file){
 		ctm2
 }
 
-
+center <- function(s, l) {
+  n <- length(s)
+  start <- floor((n - l) / 2) + 1
+  end <- start + l - 1
+  return(s[start:end])
+}
 
 bdir<-"/tmp/tempres/"
 #system("mkdir /tmp/tempres/")
 
 u=which(exp_info$Experiment=="ENCSR570WLM")
-#u=which(exp_info$Experiment=="ENCSR177QQY")
+train0=DATASET[[u]]$train
+trainLabels=DATASET[[u]]$trainLabels
 
 # SELEZIONE DEL MOTIVO CENTRALE E ARRICCHITO
-
-train=DATASET[[u]]$train
-trainLabels=DATASET[[u]]$trainLabels
+train=train0
 train$start=train$start-100
 train$end=train$end+100
 seqs<-kdmGetSequence(train,file.name="/adat/database/2bit/hg38.2bit")
@@ -46,7 +50,7 @@ centrimo<-read_centrimo(paste(bdir,"centrimo/centrimo.tsv",sep=""))
 all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05 & centrimo$bin_location<=0)]
 sel=all_selected_motifs[1]
 
-# CONVERSIONE DEL MOTIVO IN PWM
+# SALVO SOLO LA PWM SELEZIONATA 
 
 pwms<-kdmLoadPWMSet(queryfile)
 pp=which(do.call(rbind,strsplit(names(pwms)," "))[,1]==sel)
@@ -54,13 +58,10 @@ all_pwms <- read_meme(queryfile)
 sel_pwms <- all_pwms[pp]
 write_meme(sel_pwms, paste0(bdir,"selected.meme"),overwrite = TRUE)
 pwms<-kdmLoadPWMSet(paste0(bdir,"selected.meme"))
-
 th2=kdmGetPWMThresholds(pwms,0.001)
 
 # PROFILI DELLE KDM A DIVERSA HW
-train=DATASET[[u]]$train
-trainLabels=DATASET[[u]]$trainLabels
-
+train=train0
 pp=which(colnames(mcross_W)==sel)
 new_W=mcross_W[,pp]
 
@@ -81,10 +82,9 @@ all_pn <- lapply(hws, function(hw) {
 })
 
 
-# SEQUENZE PER I PROFILI DELLE PWM
-
+# SEQUENZE PER I PROFILI DELLE PWM con FIMO
+train2=train0
 ex=105
-train2=train
 train2$start=train2$start-ex-5
 train2$end=train2$end+ex+5
 seqs2<-kdmGetSequence(train2,file.name="/adat/database/2bit/hg38.2bit")
@@ -104,8 +104,8 @@ system(cmd_fimo,intern=TRUE,ignore.stderr=TRUE)
 fimo_neg<-read.table(paste(bdir,"fimo/fimo.tsv",sep=""),header=T)%>%mutate(start=start-146,stop=stop-146,Pos=start+5)
 
 # SCELTA DELLA SEQUENZA
+train2=train0
 ex=105
-train2=train
 train2$start=train2$start-ex-5
 train2$end=train2$end+ex+10
 seqs2<-kdmGetSequence(train2,file.name="/adat/database/2bit/hg38.2bit")
@@ -115,12 +115,12 @@ lims=50
 good=c()
 for(ss in 1:length(spos2)){
 	p1=kdmFeaturesProfileFromPWMSet(spos2[ss], pwms)[1:281]
-	peaks=which(p1>0)-146+5
+	peaks=which(p1>th2)-146+5
 	#peaks=peaks[peaks>= -100 & peaks <= 100]
 	#if(all(peaks >= -lims & peaks <= lims)==FALSE){next}
 	peaks=peaks[peaks >= -lims & peaks <= 0]
 	#if(length(peaks)>5 | length(peaks)==0){next}
-  if(length(peaks)>10 | length(peaks)<=2){next}
+  if(length(peaks)>5 | length(peaks)<=1){next}
 
 	keep=TRUE
 	for(j in 1:4){
@@ -194,12 +194,6 @@ final <- bind_rows(tmp)
 final=final%>%mutate(Method=factor(Method,levels=unique(final$Method)))
 
 ## B.1: CORRELAZIONE TRA OGNI CURVA E QUELLA DELLA PWM
-center <- function(s, l) {
-  n <- length(s)
-  start <- floor((n - l) / 2) + 1
-  end <- start + l - 1
-  return(s[start:end])
-}
 
 ref=subset(final,Method=="PWM"&type=="Bound")$Feature
 cor <- do.call(rbind, lapply(1:4, function(k) {
@@ -235,7 +229,7 @@ rect_df <- data.frame(
   ymax = Inf
 )
 
-## B.3: CENTRAILITA E ARRICCHIMENTO NELLA REGIONE INDIVIDUATA
+## B.3: CENTRALITA E ARRICCHIMENTO NELLA REGIONE INDIVIDUATA
             
 annot_list = lapply(seq_along(all_pn), function(k) {
   pn = all_pn[[k]]
