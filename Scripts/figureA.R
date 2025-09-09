@@ -155,11 +155,25 @@ scale_x_continuous(limits=c(-140,140),expand=c(0,0),breaks=c(-140,-70,0,70,140))
     geom_vline(xintercept=peaks,col="red",lwd=0.2)+
     facet_wrap(~Method,scales="free_y",ncol=1)+
     geom_hline(data=data.frame(Method=unique(final$Method),val=ths),aes(yintercept=val),col="blue",lwd=0.2)+
-    theme_bw()+ggtitle("Profile on a single sequence")
+    theme_bw()+xlab("Score on a single sequence")#+ggtitle("Profile on a single sequence")
 
 
 
 # B: PROFILO MEDIO SULL'INTERO SET DI SEQUENZE
+
+## B.1: REGIONE CENTRALE E ARRICCHITA
+
+cc<-centrimo[which(centrimo$E.value<0.05 & centrimo$bin_location<=0),]
+cc=cc[1,]
+xmin=floor(cc$bin_location-cc$bin_width/2)
+xmax=floor(cc$bin_location+cc$bin_width/2)
+rect_df <- data.frame(
+  Method = unique(final$Method), 
+  xmin=xmin,
+  xmax=xmax,
+  ymin = -Inf,
+  ymax = Inf
+)
 
 #get_pwm_profile=function(seqs, type) {
 #  mat=Reduce("+", lapply(seqs, function(s) kdmFeaturesProfileFromPWMSet(s, pwms)))
@@ -184,6 +198,8 @@ tmp <- c(tmp, lapply(seq_along(hws), function(k) {
   pn  <- all_pn[[k]]
   pos <- colMeans(pn$pfeat[[1]])
   neg <- colMeans(pn$nfeat[[1]])
+  #pos <- apply(pn$pfeat[[1]], 2, median)
+  #neg <- apply(pn$nfeat[[1]], 2, median)
   bind_rows(
     data.frame(Pos = pn$x, Feature = pos, type = "Bound"),
     data.frame(Pos = pn$x, Feature = neg, type = "Unbound")
@@ -210,50 +226,30 @@ cor <- do.call(rbind, lapply(1:4, function(k) {
     y = mm)
 }))
 
-cor <- as.data.frame(cor, stringsAsFactors = FALSE)
+ref=subset(final,Method=="PWM"&type=="Unbound")$Feature
+cor_neg <- do.call(rbind, lapply(1:4, function(k) {
+  pn <- all_pn[[k]]
+  mm <- max(colMeans(pn$pfeat[[1]]))
+  s2 <- subset(final, Method == paste0("KDM: win=", hws[k]*2+1) & type == "Unbound")$Feature
+  s1 <- center(ref, length(s2))
+  t <- cor.test(s1, s2, method = "pearson")
+  
+  c(Method = paste0("KDM: win=", hws[k]*2+1),
+    Measure = "Correlation_neg",
+    q.val = round(t$p.value,4),
+    Score = unname(t$estimate),
+    y = mm)
+}))
+
+
+
+cor <- rbind(as.data.frame(cor, stringsAsFactors = FALSE),as.data.frame(cor_neg, stringsAsFactors = FALSE))
 cor$q.val <- as.numeric(cor$q.val)
 cor$Score <- as.numeric(cor$Score)
 cor$y <- as.numeric(cor$y)
-
-## B.2: REGIONE CENTRALE E ARRICCHITA
-
-cc<-centrimo[which(centrimo$E.value<0.05 & centrimo$bin_location<=0),]
-cc=cc[1,]
-xmin=floor(cc$bin_location-cc$bin_width/2)
-xmax=floor(cc$bin_location+cc$bin_width/2)
-rect_df <- data.frame(
-  Method = unique(final$Method), 
-  xmin=xmin,
-  xmax=xmax,
-  ymin = -Inf,
-  ymax = Inf
-)
-
-## B.3: CENTRALITA E ARRICCHIMENTO NELLA REGIONE INDIVIDUATA
-            
-annot_list = lapply(seq_along(all_pn), function(k) {
-  pn = all_pn[[k]]
-  mm = max(colMeans(pn$pfeat[[1]]))
-  
-  ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
-  ad = (max(ne$Start) - 1) / 2
-  ne = transform(ne, Start = Start - ad, End = End - ad)
-  
-  #ne=subset(ne,End-Start!=0)
-  #res<-ne[order(rank(ne$Centrality)+rank(ne$Enrichment),ne$Centrality,decreasing=c(TRUE,TRUE)),]
-  #res=res[1,]
-  ne = ne[ne$Start == xmin & ne$End == xmax, ]
-  
-  #data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
-  #q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
-  data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
-  q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
-})
-annot = do.call(rbind, annot_list)
-annot=rbind(annot,cor)
-annot$q.val=round(annot$q.val,4)
-annot$Score=round(annot$Score,2)
-annot$Method   = factor(annot$Method, levels = unique(final$Method))
+cor$q.val=round(cor$q.val,4)
+cor$Score=round(cor$Score,2)
+cor$Method   = factor(cor$Method, levels = unique(final$Method))
 
 
 pB=ggplot(final, aes(x = Pos, y = Feature, col = type)) +
@@ -261,18 +257,21 @@ pB=ggplot(final, aes(x = Pos, y = Feature, col = type)) +
   facet_wrap(~ Method, scales = "free_y",ncol=1) +
   scale_color_manual(values = c("gold", "grey")) +
   theme_bw()+scale_x_continuous(limits=c(-140,140),expand=c(0,0),breaks=c(-140,-70,0,70,140))+
-  ggtitle("Average profile")+
-  geom_rect(data = rect_df,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-            inherit.aes = FALSE, fill = "red", alpha = 0.1)+
-    geom_text(data=annot%>%filter(Measure=="Enrichment"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
-            x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
-    geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
-            x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+
-    geom_text(data=annot%>%filter(Measure=="Correlation"),aes(y=y,label=paste0(Measure,": ",Score,"(p.val=",q.val,")")),
-            x=xmax+20,hjust=0,vjust=5,inherit.aes = FALSE,size=3)
+  #ggtitle("Average profile")+
+  #geom_rect(data = rect_df,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            #inherit.aes = FALSE, fill = "red", alpha = 0.1)+
+    #geom_text(data=annot%>%filter(Measure=="Enrichment"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            #x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
+    #geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            #x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+
+    geom_text(data=cor%>%filter(Measure=="Correlation"),aes(y=y,label=paste0("Correlation-bound: ",Score,"(p.val=",q.val,")")),
+            x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+xlab("Position")+
+    geom_text(data=cor%>%filter(Measure=="Correlation_neg"),aes(y=y,label=paste0("Correlation-unbound: "
+    ,Score,"(p.val=",q.val,")")),
+            x=xmax+20,hjust=0,vjust=5,inherit.aes = FALSE,size=3)+xlab("Position")+ylab("Average score")
             
 
-# C: HITS POSOTIVE E NEGATIVE
+# C: HITS POSITIVE E NEGATIVE
 
 tmp=list()
 #compute_pwm_counts <- function(seqs, pwms, th2, max_cols = 286) {
@@ -318,16 +317,51 @@ final=do.call(rbind,tmp)
 final=final%>%mutate(Method=factor(Method,levels=unique(final$Method)))
 
 
+
+## C.2: CENTRALITA E ARRICCHIMENTO NELLA REGIONE INDIVIDUATA
+            
+annot_list = lapply(seq_along(all_pn), function(k) {
+  pn = all_pn[[k]]
+  #mm = max(colMeans(pn$pfeat[[1]]))
+  mm=max(pn$pcounts)
+  ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
+  ad = (max(ne$Start) - 1) / 2
+  ne = transform(ne, Start = Start - ad, End = End - ad)
+  
+  #ne=subset(ne,End-Start!=0)
+  #res<-ne[order(rank(ne$Centrality)+rank(ne$Enrichment),ne$Centrality,decreasing=c(TRUE,TRUE)),]
+  #res=res[1,]
+  ne = ne[ne$Start == xmin & ne$End == xmax, ]
+  
+  #data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
+  #q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
+  data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
+  q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
+})
+annot = do.call(rbind, annot_list)
+#annot=rbind(annot,cor)
+annot$q.val=round(annot$q.val,4)
+annot$Score=round(annot$Score,2)
+annot$Method   = factor(annot$Method, levels = unique(final$Method))
+
+
+
 pC=ggplot(final,aes(x=Pos,y=Counts,fill=type))+geom_area(alpha=0.5)+
 	facet_wrap(~ Method,,ncol=1) +
   scale_fill_manual(values = c("gold", "grey")) +
-  theme_bw()+ggtitle("Hits")+
-  scale_x_continuous(limits=c(-140,140),expand=c(0,0),breaks=c(-140,-70,0,70,140))
+  theme_bw()+#ggtitle("Hits")+
+  scale_x_continuous(limits=c(-140,140),expand=c(0,0),breaks=c(-140,-70,0,70,140))+
+  geom_rect(data = rect_df,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+           inherit.aes = FALSE, fill = "red", alpha = 0.1)+
+    geom_text(data=annot%>%filter(Measure=="Enrichment"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
+    geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+xlab("Position")+ylab("Hits count")
   
   
   
 library(ggpubr)
-ggarrange(pA,pC,pB,nrow=1,align="h",widths=c(3,4,4))
+ggarrange(pA,pB,pC,nrow=1,align="h",widths=c(3,4,4))
 
 
 
