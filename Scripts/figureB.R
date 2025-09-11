@@ -105,18 +105,37 @@ if(!is.null(res)){
     result$kdm.target[u]=target%in%do.call(rbind,strsplit(selected_kdm,"\\."))[,2]
 }
 
-#top_centrimo=readRDS("profiles/centrimo_top5.rds")
+top_centrimo=readRDS("profiles/centrimo_top5.rds")
 
 
 result=data.frame(Experiment=exp_info$Experiment,target=exp_info$target,
   sel_centrimo=0,sel_kdm=0,centrimo.target=FALSE,kdm.target=FALSE,Intersect=0)
 
+
+top_kdm=list()
 for(u in 1:nrow(exp_info)){
   print(u)
+  if(length(top_centrimo[[u]])==0){
+    top_kdm[[u]]=NA
+    next}
   exp=exp_info$Experiment[u]
   target=exp_info$target[u]
 
-  pn=readRDS(paste0("profiles/",exp,".rds"))
+  train0=DATASET[[u]]$train
+  trainLabels=DATASET[[u]]$trainLabels
+  
+  pn=kdmGetProfileInfo(motifs = mcross_W,regions = train0,
+    centers = rep(36, nrow(DATASET[[u]]$train)),
+    labels = trainLabels,
+    genomeFile = "/adat/Progetti/RBP/RNA_exons/Reference/hg38/hg38.2bit",
+    halfInterval = 70,
+    halfWin = 6,
+    tolerance = 1e-10,
+    strict = FALSE,
+    use_float = FALSE
+  )
+  saveRDS(pn,paste0("profiles/",exp,".rds"))
+  #pn=readRDS(paste0("profiles/",exp,".rds"))
   ne<-kdmCentrimo(pn,symmetric=FALSE,tail="upper")
   res<-c()
   for(k in 1:ncol(mcross_W)){
@@ -134,16 +153,17 @@ for(u in 1:nrow(exp_info)){
   if(!is.null(res)){
     res<-res[order(rank(res$Centrality)+rank(res$Enrichment),res$Centrality,decreasing=c(TRUE,TRUE)),]
     selected_kdm<-colnames(mcross_W)[res$motif[1:min(5,nrow(res))]]
-    result$sel_kdm[u]=length(selected_kdm)
-    result$kdm.target[u]=target%in%do.call(rbind,strsplit(selected_kdm,"\\."))[,2]
+    top_kdm[[u]]=selected_kdm
+    #result$sel_kdm[u]=length(selected_kdm)
+    #result$kdm.target[u]=target%in%do.call(rbind,strsplit(selected_kdm,"\\."))[,2]
   }
+  if(is.null(res)){top_kdm[[u]]=NA}
+  #t=which(names(top_centrimo)==exp)
+  #sel_centrimo=top_centrimo[[t]] 
+  #if(length(sel_centrimo)>0){
+    #result$sel_centrimo[u]=length(sel_centrimo)
+    #result$centrimo.target[u]=target%in%do.call(rbind,strsplit(sel_centrimo,"\\."))[,2]
+  #}
 
-  t=which(names(top_centrimo)==exp)
-  sel_centrimo=top_centrimo[[t]] 
-  if(length(sel_centrimo)>0){
-    result$sel_centrimo[u]=length(sel_centrimo)
-    result$centrimo.target[u]=target%in%do.call(rbind,strsplit(sel_centrimo,"\\."))[,2]
-  }
-
-  if(length(selected_kdm)>0&length(sel_centrimo)>0){result$Intersect[u]=sum(selected_kdm%in%sel_centrimo)}
+  #if(length(selected_kdm)>0&length(sel_centrimo)>0){result$Intersect[u]=sum(selected_kdm%in%sel_centrimo)}
 }
