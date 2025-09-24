@@ -36,6 +36,7 @@ total=rbind()
 for(u in 1:nrow(exp_info)){
   print(u)
 exp=exp_info$Experiment[u]
+
 train0=DATASET[[u]]$train
 trainLabels=DATASET[[u]]$trainLabels
 
@@ -54,7 +55,8 @@ cmd_centrimo<-paste("centrimo --oc ",bdir,"centrimo/ --norc --neg ",bdir,"nseqs.
 system(cmd_centrimo,intern=TRUE,ignore.stderr=TRUE)
 centrimo<-read_centrimo(paste(bdir,"centrimo/centrimo.tsv",sep=""))
 
-all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05 & centrimo$bin_location<=0)]
+#all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05 & centrimo$bin_location<=0)]
+all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05)]
 if(length(all_selected_motifs)==0){next}
 top_centrimo=all_selected_motifs[1:min(length(all_selected_motifs),5)]
 
@@ -136,27 +138,90 @@ for(u in 1:nrow(exp_info)){
   )
   saveRDS(pn,paste0("profiles/",exp,".rds"))
   #pn=readRDS(paste0("profiles/",exp,".rds"))
+
+
+result_top5=rbind()
+
+for(exp in exp_info$Experiment[77:250]){
+  print(exp)
+  #sel_centrimo=top_centrimo[[which(names(top_centrimo)==exp)]]
+  #if(length(sel_centrimo)==0){next}
+  
+  u=which(exp_info$Experiment==exp)
+  train=DATASET[[u]]$train
+  trainLabels=DATASET[[u]]$trainLabels
+  seqs<-kdmGetSequence(train,file.name="/adat/database/2bit/hg38.2bit")
+  spos<-seqs[which(trainLabels==1)]
+  sneg<-seqs[which(trainLabels==0)]
+  cat(file=paste(bdir,"seqs.fa",sep=""),rbind(paste(">S",1:length(seqs),sep=""),seqs),sep="\n")
+  cat(file=paste(bdir,"pseqs.fa",sep=""),rbind(paste(">P",1:length(spos),sep=""),spos),sep="\n")
+  cat(file=paste(bdir,"nseqs.fa",sep=""),rbind(paste(">N",1:length(sneg),sep=""),sneg),sep="\n")
+
+  cmd_centrimo<-paste("centrimo --oc ",bdir,"centrimo/ --norc --neg ",bdir,"nseqs.fa --local ",bdir,"pseqs.fa ",queryfile,sep="")
+  system(cmd_centrimo,intern=TRUE,ignore.stderr=TRUE)
+  centrimo<-read_centrimo(paste(bdir,"centrimo/centrimo.tsv",sep=""))
+
+  #all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05 & centrimo$bin_location<=0)]
+  all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05)]
+  if(length(all_selected_motifs)==0){next}
+  sel_centrimo=all_selected_motifs[1:min(length(all_selected_motifs),5)]
+
+
+  result_top5=rbind(result_top5,data.frame(Experiment=exp,Method="Centrimo",Motif=sel_centrimo))
+  #pn=readRDS(paste0("profiles/",exp,".rds"))
+  file_path <- paste0("profiles/", exp, ".rds")
+
+  pn <- tryCatch(
+    readRDS(file_path),
+    error = function(e) {
+      message("Errore su ", file_path, ": ", e$message)
+      return(NULL)
+    }
+  )
+  if (is.null(pn)){
+    pn=kdmGetProfileInfo(motifs = mcross_W,regions = train,
+    centers = rep(36, nrow(DATASET[[u]]$train)),
+    labels = trainLabels,
+    genomeFile = "/adat/Progetti/RBP/RNA_exons/Reference/hg38/hg38.2bit",
+    halfInterval = 70,
+    halfWin = 6,
+    tolerance = 1e-10,
+    strict = FALSE,
+    use_float = FALSE
+  )
+  saveRDS(pn,paste0("profiles/",exp,".rds"))
+  }
+
+
   ne<-kdmCentrimo(pn,symmetric=FALSE,tail="upper")
   res<-c()
   for(k in 1:ncol(mcross_W)){
     E<-ne[[k]]
     cpos<-pn$x[2:(length(pn$x)-1)][floor((E$Start+E$End)/2)]
-    cond<-which(cpos<=0 & (E$Centrality_q.value * ncol(mcross_W)) < 0.05 & (E$Enrichment_q.value  * ncol(mcross_W))<0.05 & E$Centrality>1 & E$Enrichment>1)
+    #cond<-which(cpos<=0 & (E$Centrality_q.value * ncol(mcross_W)) < 0.05 & (E$Enrichment_q.value  * ncol(mcross_W))<0.05 & E$Centrality>1 & E$Enrichment>1)
+    cond<-which((E$Centrality_q.value * ncol(mcross_W)) < 0.05 & (E$Enrichment_q.value  * ncol(mcross_W))<0.05 & E$Centrality>1 & E$Enrichment>1)
     if(length(cond)>0){
-      ss<-E[cond[order(rank(E$Centrality[cond])+rank(E$Enrichment[cond]),E$Centrality[cond],decreasing=c(TRUE,TRUE))],]
+      #ss<-E[cond[order(rank(E$Centrality[cond])+rank(E$Enrichment[cond]),E$Centrality[cond],decreasing=c(TRUE,TRUE))],]
+      ss<-E[cond[order(rank(-log10(E$Centrality_q.value[cond]))+rank(-log10(E$Enrichment_q.value[cond])),E$Centrality[cond],decreasing=c(TRUE,TRUE))],]
       res<-rbind(res,data.frame(motif=k,ss[1,]))
         
     }
   }
 
-  selected_kdm=c()
+  #selected_kdm=c()
   if(!is.null(res)){
-    res<-res[order(rank(res$Centrality)+rank(res$Enrichment),res$Centrality,decreasing=c(TRUE,TRUE)),]
+    #res<-res[order(rank(res$Centrality)+rank(res$Enrichment),res$Centrality,decreasing=c(TRUE,TRUE)),]
+    res<-res[order( rank(-log10(res$Centrality_q.value))+rank(-log10(res$Enrichment_q.value)),res$Centrality,decreasing=c(TRUE,TRUE)),]
     selected_kdm<-colnames(mcross_W)[res$motif[1:min(5,nrow(res))]]
-    top_kdm[[u]]=selected_kdm
+    result_top5=rbind(result_top5,data.frame(Experiment=exp,Method="KDM.Centrimo",Motif=selected_kdm))
+    #top_kdm[[u]]=selected_kdm
     #result$sel_kdm[u]=length(selected_kdm)
     #result$kdm.target[u]=target%in%do.call(rbind,strsplit(selected_kdm,"\\."))[,2]
   }
+}
+
+
+
   if(is.null(res)){top_kdm[[u]]=NA}
   #t=which(names(top_centrimo)==exp)
   #sel_centrimo=top_centrimo[[t]] 

@@ -24,11 +24,16 @@ center <- function(s, l) {
   end <- start + l - 1
   return(s[start:end])
 }
+scale01 <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
 
 bdir<-"/tmp/tempres2/"
-#system("mkdir /tmp/tempres/")
+system("mkdir /tmp/tempres2/")
 
-u=which(exp_info$Experiment=="ENCSR194HZU")
+#ENCSR384KAN
+#ENCSR989VIY
+u=which(exp_info$Experiment=="ENCSR384KAN")
 #u=which(exp_info$Experiment==exp)
 for(u in 1:nrow(exp_info)){
 print(u)
@@ -98,11 +103,24 @@ cmd_fimo<-paste("fimo --oc ",bdir,"fimo/ --norc --thresh 2 --max-stored-scores 5
 system(cmd_fimo,intern=TRUE,ignore.stderr=TRUE)
 fimo_pos<-read.table(paste(bdir,"fimo/fimo.tsv",sep=""),header=T)%>%mutate(start=start-146,stop=stop-146,Pos=start+5)
 
+tmp=dcast(fimo_pos,sequence_name~Pos,value.var="score")
+tmp <- tmp[match(paste0("P",seq(1,nrow(tmp))), tmp$sequence_name), -1]%>%data.frame()
+pn$pfeat[[1]]
 
-final=rbind(fimo_pos%>%group_by(Pos)%>%summarise(Feature=median(score))%>%mutate(type="Bound",Method = "PWM"),
-data.frame(Pos = pn$x, Feature = apply(pn$pfeat[[1]], 2, median), type = "Bound",Method="KDM")
+
+
+d1 <- as.data.frame(lapply(tmp, scale01))
+d2 <- as.data.frame(lapply(data.frame(pn$pfeat[[1]]), scale01))
+v1 <- unlist(d1, use.names = FALSE)
+v2 <- unlist(d2, use.names = FALSE)
+similarity <- cor(v1, v2, method = "pearson")
+
+final=rbind(
+  fimo_pos%>%group_by(Pos)%>%summarise(Median=median(score),Mean=mean(score))%>%mutate(type="Bound",Method = "PWM"),
+  data.frame(Pos = pn$x, Median = apply(pn$pfeat[[1]], 2, median),Mean=apply(pn$pfeat[[1]], 2, mean), type = "Bound",Method="KDM")
 )
-ggplot(final,aes(x=Pos,y=Feature))+geom_line()+facet_wrap(~Method,scales="free_y",ncol=1)
+final=melt(final,id.vars=c("Pos","type","Method"))
+ggplot(final,aes(x=Pos,y=value,col=variable))+geom_line(lwd=1)+facet_wrap(~Method,scales="free_y",ncol=1)+theme_bw()
 
 
 ref=subset(final,Method=="PWM"&type=="Bound")$Feature
