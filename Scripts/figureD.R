@@ -45,8 +45,10 @@ for(u in 1:nrow(exp_info)){
     system(cmd_centrimo,intern=TRUE,ignore.stderr=TRUE)
     centrimo<-read_centrimo(paste(bdir,"centrimo/centrimo.tsv",sep=""))
 
-    all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05 & centrimo$bin_location<=0)]
-    if(length(all_selected_motifs)==0){next}
+    all_selected_motifs<-centrimo$motif_id[which(centrimo$E.value<0.05)]
+    if(length(all_selected_motifs)==0){
+        print("no centrimo central motifs")
+        next}
     sel=all_selected_motifs[1]
 
     # SALVO SOLO LA PWM SELEZIONATA 
@@ -59,28 +61,7 @@ for(u in 1:nrow(exp_info)){
     pwms<-kdmLoadPWMSet(paste0(bdir,"selected.meme"))
     th2=kdmGetPWMThresholds(pwms,0.001)
 
-    # PROFILI DELLE KDM A DIVERSA HW
-    train=train0
-    pp=which(colnames(mcross_W)==sel)
-    new_W=mcross_W[,pp]
-
-    hws <- c(5)
-
-    all_pn <- lapply(hws, function(hw) {
-        message("Profilo con hw = ", hw)
-    kdmGetProfileInfo(motifs = new_W,regions = train,
-        centers = rep(36, nrow(DATASET[[u]]$train)),
-        labels = trainLabels,
-        genomeFile = "/adat/Progetti/RBP/RNA_exons/Reference/hg38/hg38.2bit",
-        halfInterval = 140+hw,
-        halfWin = hw,
-        tolerance = 1e-10,
-        strict = FALSE,
-        use_float = FALSE
-    )
-    })
-
-
+    
     # SEQUENZE PER I PROFILI DELLE PWM con FIMO
     train2=train0
     ex=105
@@ -96,9 +77,33 @@ for(u in 1:nrow(exp_info)){
     bdir,"selected.meme ",bdir,"pseqs.fa ",sep="")
     system(cmd_fimo,intern=TRUE,ignore.stderr=TRUE)
     fimo_pos<-read.table(paste(bdir,"fimo/fimo.tsv",sep=""),header=T)%>%mutate(start=start-146,stop=stop-146,Pos=start+5)
+
+    n1=length(unique(fimo_pos$sequence_name))
+    n2=length(unique(fimo_pos$Pos))
+    if(nrow(fimo_pos)!=n1*n2){
+        print("not all fimo scores")
+        next
+    }
+
+
+    # PROFILI DELLE KDM A DIVERSA HW
+    train=train0
+    pp=which(colnames(mcross_W)==sel)
+    new_W=mcross_W[,pp]
+
+    pn=kdmGetProfileInfo(motifs = new_W,regions = train,
+        centers = rep(36, nrow(DATASET[[u]]$train)),
+        labels = trainLabels,
+        genomeFile = "/adat/Progetti/RBP/RNA_exons/Reference/hg38/hg38.2bit",
+        halfInterval = 140+5,
+        halfWin = 5,
+        tolerance = 1e-10,
+        strict = FALSE,
+        use_float = FALSE
+    )
+
     ref=fimo_pos%>%mutate(Seq=as.numeric(gsub("P","",sequence_name)))%>%arrange(Seq,Pos)%>%mutate(Ref=ifelse(score>=th2,1,0))%>%pull(Ref)
 
-    pn=all_pn[[1]]
     pred=c(t(pn$pfeat[[1]]))
     aucs$AUC[u]=auc(roc(ref,pred))
 }
