@@ -50,3 +50,47 @@ for(i in c(3,2,1,5,4)){
 }
 
 ggarrange(p0,ggarrange(plotlist=plots,nrow=1,ncol=5,common.legend=T),nrow=2,heights=c(2,8))
+
+make_vec <- function(L, x, I, U, seed = 30580) {
+  set.seed(seed)
+  A = c(rep(1, x), rep(0, L - x))
+  
+  nB = I + (U - x)
+  B = rep(0, L)
+  inter_idx = sample(1:x, I)
+  B[inter_idx] = 1
+  remaining_1 = nB - I
+  if (remaining_1 > 0) {
+    zero_idx = which(A == 0)
+    add_idx = sample(zero_idx, remaining_1)
+    B[add_idx] = 1
+  }
+  
+  return(list(A,B))
+}
+
+compute_pval_row = function(j, nA, intAB, unionAB, union_size, n_perm) {
+  if (is.na(j)) return(NA)
+  if (j == 0) return(1)
+  V = make_vec(union_size, nA, intAB, unionAB)
+  test = jaccard.test(V[[1]], V[[2]], method = "bootstrap", B = n_perm, seed = 30580)
+  return(test)
+}
+
+n_perm=10000
+union_size=1071
+library(jaccard)
+
+new_jaccard=list()
+for(k in 1:length(jaccard)){
+  tmp=jaccard[[1]]
+
+  tmp$J_pval = mapply(
+    compute_pval_row, 
+    tmp$j, tmp$ncentrimo, tmp$int, tmp$union,
+    MoreArgs = list(union_size = union_size, n_perm = n_perm)
+  )
+  tmp$J_pval_adj = p.adjust(tmp$J_pval, method = "bonferroni")
+  new_jaccard[[k]]=tmp
+}
+
