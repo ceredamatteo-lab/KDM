@@ -105,10 +105,6 @@ fimo_pos<-read.table(paste(bdir,"fimo/fimo.tsv",sep=""),header=T)%>%mutate(start
 
 tmp=dcast(fimo_pos,sequence_name~Pos,value.var="score")
 tmp <- tmp[match(paste0("P",seq(1,nrow(tmp))), tmp$sequence_name), -1]%>%data.frame()
-pn$pfeat[[1]]
-
-
-
 d1 <- as.data.frame(lapply(tmp, scale01))
 d2 <- as.data.frame(lapply(data.frame(pn$pfeat[[1]]), scale01))
 v1 <- unlist(d1, use.names = FALSE)

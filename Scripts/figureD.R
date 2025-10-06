@@ -25,7 +25,7 @@ bdir<-"/tmp/tempres2/"
 u=which(exp_info$Experiment=="ENCSR570WLM")
 
 aucs=data.frame(Experiment=exp_info$Experiment,AUC=0)
-for(u in 1:nrow(exp_info)){
+for(u in 226:nrow(exp_info)){
     print(u)
     train0=DATASET[[u]]$train
     trainLabels=DATASET[[u]]$trainLabels
@@ -85,6 +85,12 @@ for(u in 1:nrow(exp_info)){
         next
     }
 
+    ref=fimo_pos%>%mutate(Seq=as.numeric(gsub("P","",sequence_name)))%>%arrange(Seq,Pos)%>%mutate(Ref=ifelse(score>=th2,1,0))%>%pull(Ref)
+    if(length(unique(ref))==1){
+        print("No two classes")
+        next
+    }
+
 
     # PROFILI DELLE KDM A DIVERSA HW
     train=train0
@@ -102,7 +108,7 @@ for(u in 1:nrow(exp_info)){
         use_float = FALSE
     )
 
-    ref=fimo_pos%>%mutate(Seq=as.numeric(gsub("P","",sequence_name)))%>%arrange(Seq,Pos)%>%mutate(Ref=ifelse(score>=th2,1,0))%>%pull(Ref)
+    
 
     pred=c(t(pn$pfeat[[1]]))
     aucs$AUC[u]=auc(roc(ref,pred))
