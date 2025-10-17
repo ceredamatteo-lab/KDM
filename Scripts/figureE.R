@@ -1,8 +1,11 @@
 library(dplyr)
 library(reshape2)
 library(ggplot2)
+library(ggpubr)
+library(RColorBrewer)
 
-load("/adat/Progetti/KDM/MATERIALE/kdmCentrimo/jaccard_RBP_5cases_nopos.Rdata")
+#load("/adat/Progetti/KDM/MATERIALE/kdmCentrimo/jaccard_RBP_5cases_nopos.Rdata")
+load("/adat/Progetti/KDM/MATERIALE/kdmCentrimo/jaccard_RBP_5cases_nopos_newfunction.Rdata")
 
 get_info=function(data){
     data=data%>%mutate(ID=paste0(target,"_",cell))
