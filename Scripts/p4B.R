@@ -134,8 +134,8 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
 corr_info=melt(readRDS(paste0(data_folder,"p4B.rds")),id.vars = c("CellLine","RBP","n"))%>%
   filter(!is.na(value))
 pA=ggplot(corr_info,aes(x=value,fill=variable,col=variable))+
-  #geom_histogram(alpha=0.2,position = "identity",bins=100)+
-  geom_density(alpha=0.4)+
+  geom_histogram(alpha=0.2,position = "identity",bins=100)+
+  #geom_density(alpha=0.4)+
   theme_bw()+theme(panel.grid = element_blank())
 
 pdf(paste0(plot_folder,"P4B_RBP.pdf"),height = 5,width = 5)
