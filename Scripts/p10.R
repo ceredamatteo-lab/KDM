@@ -235,7 +235,7 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   plot_folder="PARTI_FIGURE/"
 }
 
-load("Rdata/Paper_Figure/P10.Rdata")
+load(paste0(data_folder,"P10.Rdata"))
 breaks=c(0,5,10000,Inf)
 labels=c("1-5",">5","Not selected")
 plots2=list()
