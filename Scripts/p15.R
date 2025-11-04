@@ -76,7 +76,7 @@ classification[classification=="No match"]="No match to target"
 colnames(classification)[2:3]=c("CISBP-ATTRACT_mCross_Tomtom","CISBP-ATTRACT_mCross_KDMtom")
 saveRDS(classification,"RBP/Paper_Figure/p15.rds")
 
-## P15.PLOT ----
+# P15.PLOT ----
 
 if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   setwd("/Users/tbecchi/Desktop/repository/KDM/")
@@ -89,7 +89,6 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   plot_folder="PARTI_FIGURE/"
   script_folder="PARTI_FIGURE/"
 }
-
 
 source(paste0(script_folder,"00_plot_functions.R"))
 result=readRDS(paste0(data_folder,"p15.rds"))
