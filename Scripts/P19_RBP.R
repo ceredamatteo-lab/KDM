@@ -1,6 +1,6 @@
 library(rkdMotifs)
 library(universalmotif)
-
+## P19.DATA ----
 setwd("/adat/Progetti/KDM/MATERIALE")
 source("/adat/Progetti/KDM/FACTORBOOK2/RTX/funzioni_importanti.rtx")
 load("RBP/ENCODE_eCLIP_DATASET.Rdata")

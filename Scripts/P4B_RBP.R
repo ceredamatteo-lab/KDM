@@ -218,10 +218,12 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   setwd("/Users/tbecchi/Desktop/repository/KDM/")
   data_folder="Rdata/Paper_Figure/"
   plot_folder="Figure/Paper_Figure/"
+  data.info="Rdata/Paper_Figure/ENCODE_eCLIP_DATASET.Rdata"
 } else{
   setwd("/adat/Progetti/KDM/MATERIALE/")
   data_folder="RBP/Paper_Figure/"
   plot_folder="PARTI_FIGURE/"
+  data.info="RBP/ENCODE_eCLIP_DATASET.Rdata"
 }
 
 min.peaks=50
@@ -232,7 +234,7 @@ corr_info$Method[which(corr_info$Method=="Cor13")]="Half win=6"
 corr_info$Method[which(corr_info$Method=="Cor15")]="Half win=35"
 
 info=readRDS(paste0(data_folder,"info_corr.rds"))%>%data.frame()%>%rename(PWM=1,Experiment=2)
-load("RBP/ENCODE_eCLIP_DATASET.Rdata")
+load(data.info)
 
 corr=merge(cbind(info,corr_info),exp_info%>%select(Experiment,nTrainPeaks),by="Experiment")%>%
 filter(nTrainPeaks>=min.peaks)

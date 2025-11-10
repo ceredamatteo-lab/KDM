@@ -141,7 +141,7 @@ pdf(paste0(plot_folder,"P17_RBP.pdf"),height = 7,width = 7)
 p1
 dev.off()
 
-# P18 DATA
+# P18 DATA ----
 label=DATASET[[u]]$trainLabels
 anno=read.csv(paste0("RBP/Paper_Figure/",exp,".hg38_multianno.csv"))[which(label==1),]
 reg=DATASET[[u]]$train[which(label==1),]
