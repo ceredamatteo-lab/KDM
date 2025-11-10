@@ -156,7 +156,8 @@ dev.off()
 
 coefs<-all_auc_m %>%group_by(variable) %>%
   do({
-    model <- lm(value ~ log10(nTrainPeaks), data = .)
+    #model <- lm(value ~ log10(nTrainPeaks), data = .)
+    model <- lm(value ~ nTrainPeaks, data = .)
     data.frame(slope = coef(model)[2], intercept = coef(model)[1])
   })
 
@@ -177,11 +178,14 @@ ggarrange(
     geom_smooth(method='lm',alpha=0.2)+theme_bw()+theme(axis.title.x = element_blank())+
     geom_segment(x = x1, xend = x1, y = -Inf, yend = kdm$slope * x1 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
     geom_segment(x = x2, xend = x2, y = -Inf, yend = kdm$slope * x2 + kdm$intercept, linetype = "dashed", color = "black",lwd=0.3)+
-    ylab("AUC")+scale_color_manual(values = colors_fill)+scale_x_log10()
+    ylab("AUC")+scale_color_manual(values = colors_fill)#+scale_x_log10()
   ,
   ggplot(data.frame(nTrainPeaks=all_auc%>%arrange(nTrainPeaks)%>%pull(nTrainPeaks))%>%mutate(Percentile=seq(1,250)/250),
-         aes(x=nTrainPeaks,y=Percentile))+annotate(geom = "rect",xmin = 10^x1,xmax = 10^x2,ymin = -Inf,ymax=Inf,fill="gold",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
-    geom_line(col="black",lwd=0.5)+theme_bw()+scale_x_log10(),
+         aes(x=nTrainPeaks,y=Percentile))+
+    #annotate(geom = "rect",xmin = 10^x1,xmax = 10^x2,ymin = -Inf,ymax=Inf,fill="gold",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
+    annotate(geom = "rect",xmin = x1,xmax = x2,ymin = -Inf,ymax=Inf,fill="gold",alpha=0.5,col="black",lty="dashed",lwd=0.3)+
+    geom_line(col="black",lwd=0.5)+theme_bw()#+scale_x_log10()
+  ,
   align = "hv",ncol=1,heights = c(6,4))
 dev.off()
 
