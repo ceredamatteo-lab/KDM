@@ -40,3 +40,4 @@ ggplot(auc_mean%>%mutate(variable=factor(variable,levels=order)),aes(x=variable,
   geom_text(data=auc_mean%>%group_by(variable)%>%summarise(median=median(value,na.rm=T),mean=mean(value,na.rm = T)),aes(y=median,label=round(median,3)),show.legend = F,hjust=-1)+
   ggtitle("AUCs on RBP_24 with RNAProt datsets")
 dev.off()
+
