@@ -216,7 +216,7 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   plot_folder="PARTI_FIGURE/"
 }
 
-half_interval=140 
+half_interval=70 
 data=readRDS(paste0(data_folder,"p4A.rds"))
 final=data$final
 peaks=data$peaks
@@ -264,7 +264,7 @@ cc=cc[1,]
 xmin=floor(cc$bin_location-cc$bin_width/2)
 xmax=floor(cc$bin_location+cc$bin_width/2)
 rect_df <- data.frame(
-  Method = unique(final$Method), 
+  Method = "PWM", 
   xmin=xmin,
   xmax=xmax,
   ymin = -Inf,
@@ -274,22 +274,41 @@ rect_df <- data.frame(
 ## CENTRALITY AND ENRICHMENT IN THE SELECTED REGION ----
 
 #annot_list = lapply(seq_along(all_pn), function(k) {
-annot_list = lapply(1, function(k) {
-  pn = all_pn[[k]]
-  mm=max(pn$pcounts)
-  ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
-  ad = (max(ne$Start) - 1) / 2
-  ne = transform(ne, Start = Start - ad, End = End - ad)
-  ne = ne[ne$Start == xmin & ne$End == xmax, ]
-  data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
-             q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
-})
-annot = do.call(rbind, annot_list)
-annot$q.val=round(annot$q.val,4)
-annot$Score=round(annot$Score,2)
-annot$Method   = factor(annot$Method, levels = unique(final$Method))
 
-saveRDS(list(final=final,rect_df=rect_df,annot=annot),"RBP/Paper_Figure/p9.rds")
+k=1
+pn = all_pn[[k]]
+ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
+ad = (max(ne$Start) - 1) / 2
+ne = transform(ne, Start = Start - ad, End = End - ad)
+ne<-ne[order(rank(-log10(ne$Centrality_q.value))+rank(-log10(ne$Enrichment_q.value)),-log10(ne$Centrality_q.value),decreasing=TRUE),]
+ne=ne[1,]
+rect_df <- rbind(rect_df,data.frame(
+    Method = paste0("KDM: win=", hws[k]*2+1), 
+    xmin=ne$Start,
+    xmax=ne$End,
+    ymin = -Inf,
+    ymax = Inf
+))%>%mutate(Method=factor(Method,levels=levels(final$Method)))
+
+#annot_list = lapply(1, function(k) {
+#  pn = all_pn[[k]]
+#  mm=max(pn$pcounts)
+#  ne = kdmCentrimo(pn, symmetric = FALSE, tail = "upper")[[1]]
+#  ad = (max(ne$Start) - 1) / 2
+#  ne = transform(ne, Start = Start - ad, End = End - ad)
+#  ne<-ne[order(rank(-log10(ne$Centrality_q.value))+rank(-log10(ne$Enrichment_q.value)),-log10(ne$Centrality_q.value),decreasing=TRUE),]
+  #ne = ne[ne$Start == xmin & ne$End == xmax, ]
+#  ne=ne[1,]
+#  data.frame(Method  = rep(paste0("KDM: win=", hws[k]*2+1), 2),Measure = c("Enrichment", "Centrality"),
+#             q.val   = c(ne$Enrichment_q.value, ne$Centrality_q.value),Score=c(ne$Enrichment,ne$Centrality),y= mm,stringsAsFactors = FALSE)
+#})
+#annot = do.call(rbind, annot_list)
+#annot$q.val=round(annot$q.val,4)
+#annot$Score=round(annot$Score,2)
+#annot$Method   = factor(annot$Method, levels = unique(final$Method))
+
+#saveRDS(list(final=final,rect_df=rect_df,annot=annot),"RBP/Paper_Figure/p9.rds")
+saveRDS(list(final=final,rect_df=rect_df),"RBP/Paper_Figure/p9.rds")
 
 # P9.PLOT -----
 library(ggplot2)
@@ -305,10 +324,10 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   plot_folder="PARTI_FIGURE/"
 }
 
-half_interval=140
+half_interval=70
 data=readRDS(paste0(data_folder,"p9.rds"))
 final=data$final
-annot=data$annot
+#annot=data$annot
 rect_df=data$rect_df
 xmax=unique(rect_df$xmax)
 
@@ -320,10 +339,11 @@ pB=ggplot(final,aes(x=Pos,y=Counts,fill=type))+geom_area(alpha=0.5)+
                      expand=c(0,0),breaks=c(-half_interval,-half_interval/2,0,half_interval/2,half_interval))+
   geom_rect(data = rect_df,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
             inherit.aes = FALSE, fill = "red", alpha = 0.1)+
-  geom_text(data=annot%>%filter(Measure=="Enrichment"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
-            x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
-  geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
-            x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+xlab("Position")+ylab("Hits count")
+    theme(panel.grid=element_blank())
+  #geom_text(data=annot%>%filter(Measure=="Enrichment"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            #x=xmax+20,hjust=0,vjust=1,inherit.aes = FALSE,size=3)+
+  #geom_text(data=annot%>%filter(Measure=="Centrality"),aes(y=y,label=paste0(Measure,": ",Score,"(q.val=",q.val,")")),
+            #x=xmax+20,hjust=0,vjust=3,inherit.aes = FALSE,size=3)+xlab("Position")+ylab("Hits count")
 
 pdf(paste0(plot_folder,"P9_RBP.pdf"),height = 5,width = 8)
 pB

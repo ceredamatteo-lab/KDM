@@ -83,7 +83,8 @@ buoni<-which(tom$target2==exp_info$target[u] & tom$target==pwm_sel)
 ranks[as.numeric(tom$query[buoni])]<-tom$rank[buoni]
 
 KDMM<-MR$WR[,good]
-mnames<-c("PWM",paste("KDM-",1:ncol(W)," (",ranks,")",sep=""),"KDMM (1)")
+#mnames<-c("PWM",paste("KDM-",1:ncol(W)," (",ranks,")",sep=""),"KDMM (1)")
+mnames<-c("PWM",paste("KDM-",1:ncol(W),sep=""),"KDMM")
 cscale<-c25[1:(ncol(W)+2)]
 kPWM<-mcross_W[,which(colnames(mcross_W)==pwm_sel)]
 probs<-as.numeric(kPWM)^2
@@ -93,19 +94,24 @@ infoPWM<-data.frame(name="PWM",prob=probs[sel_kmers],x=1:length(sel_kmers))
 infoKDM<-c()
 for(j in 1:ncol(W)){
     pp<-as.numeric(W[,j]^2)[sel_kmers]
-    infoKDM<-rbind(infoKDM,data.frame(name=paste("KDM-",j," (",ranks[j],")",sep=""),prob=pp,x=1:length(sel_kmers)))
+    infoKDM<-rbind(infoKDM,data.frame(name=paste("KDM-",j,sep=""),prob=pp,x=1:length(sel_kmers)))
 }
-infoKDMM<-data.frame(name="KDMM (1)",prob=as.numeric(KDMM[,1]^2)[sel_kmers],x=1:length(sel_kmers))
+infoKDMM<-data.frame(name="KDMM",prob=as.numeric(KDMM[,1]^2)[sel_kmers],x=1:length(sel_kmers))
 info<-rbind(infoPWM[,1:3],infoKDM,infoKDMM)
-info$name<-factor(info$name,levels=c("PWM",paste("KDM-",1:ncol(W)," (",ranks,")",sep=""),"KDMM (1)"))
+info$name<-factor(info$name,levels=c("PWM",paste("KDM-",1:ncol(W),sep=""),"KDMM"))
 info2<-info %>% group_by(name) %>% summarise("Cumulated probability"=sum(prob))
 infoKDM2<-merge(merge(infoKDM,infoKDM %>% group_by(x) %>% summarise(tot=sum(prob)),by="x"),infoKDMM[,2:3],by="x") %>% mutate(prob=prob.x * prob.y / tot)
 infoKDM2<-infoKDM2[,c(2,6,1)]
-infoKDM2$plt<-"KDMM (1)"
+infoKDM2$plt<-"KDMM"
 infoPWM$plt<-"PWM"
 info2$name<-factor(info2$name,levels=mnames)
 info3<-rbind(infoPWM,infoKDM2)
 info3$name<-factor(info3$name,levels=mnames)
+#info3 <- rbind(info3, data.frame(name = "KDMM",prob = 0,x = 1,plt = "KDMM",stringsAsFactors = FALSE))
+tmp=info3%>%filter(plt=="KDMM")%>%group_by(x,plt)%>%summarise(prob=sum(prob))
+info3=rbind(info3,tmp%>%mutate(name="KDMM",plt="KDMM0")%>%select(name,prob,x,plt))%>%
+mutate(plt=factor(plt,levels=c("PWM","KDMM0","KDMM")))
+
 
 save(file="RBP/Paper_Figure/P16_P17.Rdata",info2,info3,cscale)
 
@@ -126,11 +132,12 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
 
 load(paste0(data_folder,"P16_P17.Rdata"))
 
-p1<-ggplot(data=info2,aes(x=name,y=`Cumulated probability`,fill=name)) + geom_bar(stat="identity",col="black") + scale_fill_manual(values=cscale)+theme_bw()+theme(panel.grid=element_blank())+
+p1<-ggplot(data=info2,aes(x=name,y=`Cumulated probability`,fill=name)) + geom_bar(stat="identity",col="black",show.legend=F) + scale_fill_manual(values=cscale)+theme_bw()+theme(panel.grid=element_blank())+
 geom_text(aes(y=`Cumulated probability`/2,label=paste0(round(`Cumulated probability`,3)*100,"%")))
 
-p2<-ggplot(data=info3,aes(x=x,y=prob,fill=name)) + geom_bar(position="stack",stat="identity") + scale_fill_manual(values=cscale) + facet_grid(plt~.,scale="free_y")+theme_bw()+
-theme(panel.grid=element_blank(),strip.text.y=element_text(angle=0))
+p2<-ggplot(data=info3,aes(x=x,y=prob,fill=name))+ 
+geom_bar(position="stack",stat="identity") + scale_fill_manual(values=cscale,drop=FALSE) + facet_grid(plt~.,scale="free_y")+theme_bw()+
+theme(panel.grid=element_blank(),strip.text.y = element_blank())+xlab("k-mers")
 
 pdf(paste0(plot_folder,"P16_RBP.pdf"),height = 5,width = 12)
 p2
@@ -141,7 +148,7 @@ pdf(paste0(plot_folder,"P17_RBP.pdf"),height = 7,width = 7)
 p1
 dev.off()
 
-# P18 DATA ----
+# P18 DATA
 label=DATASET[[u]]$trainLabels
 anno=read.csv(paste0("RBP/Paper_Figure/",exp,".hg38_multianno.csv"))[which(label==1),]
 reg=DATASET[[u]]$train[which(label==1),]
@@ -152,7 +159,7 @@ anno<-anno[selpeaks,]
 seq=kdmGetSequence(reg,genomeFile)
 FF=kdmFeatures(W,seq)
 ff=data.frame(FF[selpeaks,])
-colnames(ff)[1:3]=paste0("Motif-",1:3)
+colnames(ff)[1:3]=paste0("KDM-",1:3)
 ff$Annovar=anno$Func.refGene
 mm=merge(melt(ff,id.vars="Annovar"),ff%>%count(Annovar),by="Annovar")%>%
 mutate(Annotation=gsub("_","\n",paste0(Annovar,"\n(",n,")")))
@@ -224,7 +231,7 @@ colors_group2 <- RColorBrewer::brewer.pal(n = length(group2_levels), name = "Set
 
 
 plot_list=list()
-for(m in paste0("Motif-",1:3)){
+for(m in paste0("KDM-",1:3)){
     sub=subset(res_mod,variable==m)
     
     p <- ggplot(sub, aes(x=group2_mod, y=group1_mod)) +
