@@ -227,6 +227,7 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
 }
 
 min.peaks=50
+half_windows=c(6,35)
 corr_info=melt(data.frame(readRDS(paste0(data_folder,"p4B_ALL.rds")))[,c(13,15)])
 colnames(corr_info)=c("Method","Correlations")
 corr_info$Method <- as.character(corr_info$Method)
@@ -238,7 +239,15 @@ load(data.info)
 
 corr=merge(cbind(info,corr_info),exp_info%>%select(Experiment,nTrainPeaks),by="Experiment")%>%
 filter(nTrainPeaks>=min.peaks)
-o=corr%>%group_by(Method)%>%summarise(med=median(Correlations))%>%arrange(desc(med))%>%pull(Method)
+o=paste0("Half win=",half_windows)
+#o=corr%>%group_by(Method)%>%summarise(med=median(Correlations))%>%arrange(desc(med))%>%pull(Method)
+
+pA=ggplot(corr%>%mutate(Method=factor(Method,levels=o)),aes(x=Method,y=Correlations,fill=Method))+
+  geom_boxplot(notch = T,width=0.4)+
+  scale_fill_brewer(palette = "Set2")+theme_bw() +
+  theme(panel.grid = element_blank()) +
+  coord_cartesian(ylim = c(-1, 1))+geom_hline(yintercept = 0,lty="dashed",lwd=0.2)
+
 
 pA=ggplot(corr%>%mutate(Method=factor(Method,levels=o)),aes(x=Correlations,fill=Method,col=Method))+
 	geom_histogram(alpha = 0.5, position = "identity", bins = 100, color = NA) +
@@ -247,7 +256,7 @@ pA=ggplot(corr%>%mutate(Method=factor(Method,levels=o)),aes(x=Correlations,fill=
   	theme(panel.grid = element_blank()) +
   	coord_cartesian(xlim = c(-1, 1))
 
-pdf(paste0(plot_folder,"P4B_RBP.pdf"),height = 5,width = 5)
+pdf(paste0(plot_folder,"P4B_RBP.pdf"),height = 5,width = 3)
 pA
 dev.off()
 
