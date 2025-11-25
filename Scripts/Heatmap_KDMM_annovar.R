@@ -14,7 +14,7 @@ if(Sys.info()["user"]=="tbecchi"){
   res=readRDS("/adat/Progetti/KDM/MATERIALE/RBP/pvalues_annovar2.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
 }  
 #res=readRDS("/Users/tbecchi/Desktop/CLIP_maps/pvalues_annovar.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
-info_cl=rr%>%select(Exp,Cluster,N.motifs)%>%unique()
+info_cl=res%>%select(Exp,Cluster,N.motifs)%>%unique()
 
 print(length(unique(res$Exp)))
 print(length(unique(res$Cluster)))
@@ -27,7 +27,7 @@ ggplot(res,aes(x=Score,fill=Annovar))+geom_density(alpha=1)+facet_wrap(~Annovar,
   scale_x_log10()+geom_vline(xintercept = -log10(th))+theme_classic()+
   scale_fill_manual(values = mycols)
 
-res2=dcast( rr,formula = Exp+Cluster~Annovar,value.var = "P.val")
+res2=dcast( res,formula = Exp+Cluster~Annovar,value.var = "P.val")
 p_fish=c()
 for(i in 1:nrow(res2)){
   x <- res2[i, -c(1,2)][ !is.na(res2[i, -c(1,2)]) ]
@@ -78,8 +78,11 @@ o=colSums(!is.na(P_method))
 o=o[order(o)]
 o2=rowSums(!is.na(P_method))
 o2=o2[order(o2)]
-info=merge(exp_info%>%filter(Experiment %in% res2$Exp)%>%select(Experiment,target,cell),
-           res2%>%count(Exp)%>%rename(Experiment=1,n.clusters=2),by="Experiment")
+#info=merge(exp_info%>%filter(Experiment %in% res2$Exp)%>%select(Experiment,target,cell),
+           #res2%>%count(Exp)%>%rename(Experiment=1,n.clusters=2),by="Experiment")
+
+tmp=info_cl%>%filter(Cluster%in%res2$Cluster)%>%group_by(Exp)%>%summarise(N.Clusters=n(),Average.Motifs=mean(N.motifs))%>%rename(Experiment=1)
+info=merge(exp_info%>%filter(Experiment %in% res2$Exp),tmp,by="Experiment")
 rownames(info)=info$Experiment
 
 col_fun <- colorRamp2(
@@ -88,7 +91,8 @@ col_fun <- colorRamp2(
 )
 
 cell_vec <- info[rev(names(o2)), "cell"]
-N_vec <- info[rev(names(o2)), "n.clusters"]
+N_vec <- info[rev(names(o2)), "N.Clusters"]
+
 cell_types <- unique(cell_vec)
 cell_colors <- structure(c("orchid","forestgreen"),names = cell_types)
 
@@ -123,7 +127,8 @@ ht=Heatmap(
   }
 )
 
-pdf("/Users/tbecchi/Desktop/CLIP_maps/annovar_fisher_method.pdf",width = 6,height = 20)
+#pdf("/Users/tbecchi/Desktop/CLIP_maps/annovar_fisher_method.pdf",width = 6,height = 20)
+pdf("/adat/Progetti/KDM/MATERIALE/RBP/annovar_fisher_method.pdf",width = 6,height = 20)
 ht
 dev.off()
 
