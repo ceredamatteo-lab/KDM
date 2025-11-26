@@ -9,9 +9,11 @@ th=0.05
 if(Sys.info()["user"]=="tbecchi"){
   load(file = "/Users/tbecchi/Desktop/repository/KDM/Rdata/Paper_Figure/ENCODE_eCLIP_DATASET.Rdata")
   res=readRDS("/Users/tbecchi/Desktop/CLIP_maps/pvalues_annovar2.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
+  plot_folder="/Users/tbecchi/Desktop/CLIP_maps/"
 } else {
   load(file = "/adat/Progetti/KDM/MATERIALE/RBP/ENCODE_eCLIP_DATASET.Rdata")
   res=readRDS("/adat/Progetti/KDM/MATERIALE/RBP/pvalues_annovar2.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
+  plot_folder="/adat/Progetti/KDM/MATERIALE/RBP/"
 }  
 #res=readRDS("/Users/tbecchi/Desktop/CLIP_maps/pvalues_annovar.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
 info_cl=res%>%select(Exp,Cluster,N.motifs)%>%unique()
@@ -31,10 +33,7 @@ res2=dcast( res,formula = Exp+Cluster~Annovar,value.var = "P.val")
 p_fish=c()
 for(i in 1:nrow(res2)){
   x <- res2[i, -c(1,2)][ !is.na(res2[i, -c(1,2)]) ]
-  if(0 %in% x){
-    #nx=min(x[x!=0])
-    x[x==0]=.Machine$double.xmin
-  }
+  if(0 %in% x){x[x==0]=.Machine$double.xmin}
   X2 <- -2 * sum(log(x))
   p_fisher <- pchisq(X2, df = 2*length(x),lower.tail = FALSE)
   p_fish=c(p_fish,p_fisher)
@@ -57,9 +56,7 @@ for( exp in unique(res2$Exp)){
     if (length(x)==0){
       p_fisher=NA
     } else{
-      if(0 %in% x){
-        x[x==0]=.Machine$double.xmin
-      }
+      if(0 %in% x){x[x==0]=.Machine$double.xmin}
       X2 <- -2 * sum(log(x))
       p_fisher <- pchisq(X2, df = 2*length(x),lower.tail = FALSE)
     }
@@ -91,22 +88,30 @@ col_fun <- colorRamp2(
 )
 
 cell_vec <- info[rev(names(o2)), "cell"]
-N_vec <- info[rev(names(o2)), "N.Clusters"]
+clus_vec <- info[rev(names(o2)), "N.Clusters"]
+mot_vec <- info[rev(names(o2)), "Average.Motifs"]
+seq_vec <- log10(info[rev(names(o2)), "nTrainPeaks"])
 
 cell_types <- unique(cell_vec)
 cell_colors <- structure(c("orchid","forestgreen"),names = cell_types)
 
-row_ha <- rowAnnotation(
-  Cell = cell_vec,
-  N.clusters = N_vec,
-  col = list(
-    Cell = cell_colors,
-    N.clusters = colorRamp2(c(min(N_vec, na.rm = TRUE), max(N_vec, na.rm = TRUE)),c("moccasin", "navajowhite4") )
-  ),
-  annotation_width = unit(c(4, 4), "mm")
-)
 P_method=P_method[rev(names(o2)),rev(names(o))]
 row_names_heatmap <- info[rev(names(o2)), "target"]
+
+row_ha <- rowAnnotation(
+  Cell = cell_vec,
+  N.Clusters = clus_vec,
+  Avg.Motifs=mot_vec,
+  `log10\n(N.Regions)`=seq_vec,
+  col = list(
+    Cell = cell_colors,
+    N.Clusters = colorRamp2(c(min(clus_vec, na.rm = TRUE), max(clus_vec, na.rm = TRUE)),c("moccasin", "navajowhite4") ),
+    Avg.Motifs = colorRamp2(c(min(mot_vec, na.rm = TRUE), max(mot_vec, na.rm = TRUE)),c("pink", "firebrick") ),
+    `log10\n(N.Regions)` = colorRamp2(c(min(seq_vec, na.rm = TRUE), max(seq_vec, na.rm = TRUE)),c("mistyrose1", "mistyrose4") )
+  ),
+  annotation_width = unit(c(4, 4), "mm"),annotation_name_gp = gpar(fontsize = 8)
+)
+
 ht=Heatmap(
   P_method,
   cluster_rows = FALSE,
@@ -126,9 +131,9 @@ ht=Heatmap(
               gp = gpar(col = "white", fill = fill))
   }
 )
+ht
 
-#pdf("/Users/tbecchi/Desktop/CLIP_maps/annovar_fisher_method.pdf",width = 6,height = 20)
-pdf("/adat/Progetti/KDM/MATERIALE/RBP/annovar_fisher_method.pdf",width = 6,height = 20)
+pdf(paste0(plot_folder,"annovar_fisher_method.pdf"),width = 6,height = 20)
 ht
 dev.off()
 
