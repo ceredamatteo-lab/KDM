@@ -154,7 +154,7 @@ info2=merge(info2,info_cl[,2:3],by="Cluster")
 info2=merge(info2%>%dplyr::rename(Experiment=2),info[,c("Experiment","nTrainPeaks","IC.mean")],by="Experiment",all.x = TRUE)
 info2$Fisher.Method[info2$Fisher.Method==0]=.Machine$double.xmin
 info2$log_fisher=-log10(info2$Fisher.Method)
-info2=info2%>%dplyr::rename(`Significative class`=n_sign,`Number of motifs`=N.motifs,`Average IC`=IC.mean,`Number of regions`=nTrainPeaks,`-log10(Fisher)`=log_fisher)
+info2=info2%>%dplyr::rename(`Significative classes`=n_sign,`Number of motifs`=N.motifs,`Average IC`=IC.mean,`Number of regions`=nTrainPeaks,`-log10(Fisher)`=log_fisher)
 
 corrs=data.frame()
 for(k in 4:7){
@@ -166,14 +166,14 @@ for(k in 4:7){
   }
 }
 corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info2)[4:8]),v2=factor(v2,levels=colnames(info2)[4:8]))
-ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
+p1=ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
   geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
   scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
-  geom_text(aes(label=round(corr,2)))
+  geom_text(aes(label=round(corr,2)))+ggtitle("")+ggtitle("Cluster correlations")
 
-info3=info2%>%dplyr::group_by(Experiment)%>%dplyr::summarise(`Significative class`=mean(`Significative class`),`Number of motifs`=mean(`Number of motifs`),
+info3=info2%>%dplyr::group_by(Experiment)%>%dplyr::summarise(`Average\nSignificative classes`=mean(`Significative classes`),`Average\nNumber of motifs`=mean(`Number of motifs`),
                                                              `Number of regions`=unique(`Number of regions`),`Average IC`=unique(`Average IC`),
-                                                             `-log10(Fisher)`=mean(`-log10(Fisher)`),`Number of clusters`=n())
+                                                             `Average\n-log10(Fisher)`=mean(`-log10(Fisher)`),`Number of clusters`=n())
 corrs=data.frame()
 for(k in 2:6){
   for (w in (k+1):7){
@@ -184,11 +184,12 @@ for(k in 2:6){
   }
 }
 corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info3)[2:7]),v2=factor(v2,levels=colnames(info3)[2:7]))
-ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
+p2=ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
   geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
   scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
-  geom_text(aes(label=round(corr,2)))
+  geom_text(aes(label=round(corr,2)))+ggtitle("Experiment correlations")
 
+ggarrange(p1,p2,nrow = 1,align = "h")
 
 length(unique(res$Exp))
 n=res%>%count(Exp,Cluster)%>%count(Exp)
