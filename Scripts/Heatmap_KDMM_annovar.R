@@ -10,13 +10,20 @@ if(Sys.info()["user"]=="tbecchi"){
   load(file = "/Users/tbecchi/Desktop/repository/KDM/Rdata/Paper_Figure/ENCODE_eCLIP_DATASET.Rdata")
   res=readRDS("/Users/tbecchi/Desktop/CLIP_maps/pvalues_annovar2.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
   plot_folder="/Users/tbecchi/Desktop/CLIP_maps/"
+  ic=readRDS("/Users/tbecchi/Desktop/CLIP_maps/ICscore.rds")
 } else {
   load(file = "/adat/Progetti/KDM/MATERIALE/RBP/ENCODE_eCLIP_DATASET.Rdata")
   res=readRDS("/adat/Progetti/KDM/MATERIALE/RBP/pvalues_annovar2.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
   plot_folder="/adat/Progetti/KDM/MATERIALE/RBP/"
+  ic=readRDS("/adat/Progetti/KDM/MATERIALE/RBP/CLIP_maps/ICscore.rds")
 }  
-#res=readRDS("/Users/tbecchi/Desktop/CLIP_maps/pvalues_annovar.rds")%>%filter(Annovar!=".")%>%mutate(Sign=P.val<=th,Score=-log10(P.val))
+ic=ic%>%dplyr::group_by(rbp,cell)%>%dplyr::summarise(IC.mean=mean(icscore),IC.sd=sd(icscore))
+exp_info=merge(exp_info%>%dplyr::mutate(ID=paste0(target,"_",cell)),
+               ic%>%dplyr::mutate(ID=paste0(rbp,"_",cell))%>%dplyr::select(ID,IC.mean),
+               by="ID",all.x = TRUE)
 info_cl=res%>%select(Exp,Cluster,N.motifs)%>%unique()
+
+res_d=dcast(res,Exp+Cluster~Annovar,value.var = "P.val")
 
 print(length(unique(res$Exp)))
 print(length(unique(res$Cluster)))
@@ -75,8 +82,8 @@ o=colSums(!is.na(P_method))
 o=o[order(o)]
 o2=rowSums(!is.na(P_method))
 o2=o2[order(o2)]
-#info=merge(exp_info%>%filter(Experiment %in% res2$Exp)%>%select(Experiment,target,cell),
-           #res2%>%count(Exp)%>%rename(Experiment=1,n.clusters=2),by="Experiment")
+
+o2=info%>%arrange(nTrainPeaks)%>%pull(Experiment)
 
 tmp=info_cl%>%filter(Cluster%in%res2$Cluster)%>%group_by(Exp)%>%summarise(N.Clusters=n(),Average.Motifs=mean(N.motifs))%>%rename(Experiment=1)
 info=merge(exp_info%>%filter(Experiment %in% res2$Exp),tmp,by="Experiment")
@@ -140,13 +147,47 @@ dev.off()
 subset(exp_info,cell=="HepG2")$Experiment
 
 
+info2=res2
+info2$n_sign <- rowSums(info2[, 3:15] < th, na.rm = TRUE)
+info2=info2%>%dplyr::select(Exp,Cluster,Fisher.Method,n_sign)
+info2=merge(info2,info_cl[,2:3],by="Cluster")
+info2=merge(info2%>%dplyr::rename(Experiment=2),info[,c("Experiment","nTrainPeaks","IC.mean")],by="Experiment",all.x = TRUE)
+info2$Fisher.Method[info2$Fisher.Method==0]=.Machine$double.xmin
+info2$log_fisher=-log10(info2$Fisher.Method)
+info2=info2%>%dplyr::rename(`Significative class`=n_sign,`Number of motifs`=N.motifs,`Average IC`=IC.mean,`Number of regions`=nTrainPeaks,`-log10(Fisher)`=log_fisher)
 
+corrs=data.frame()
+for(k in 4:7){
+  for (w in (k+1):8){
+    a1=info2[,k]
+    a2=info2[,w]
+    t=cor.test(a1,a2)
+    corrs=rbind(corrs,data.frame(v1=colnames(info2)[k],v2=colnames(info2)[w],corr=t$estimate,pval=t$p.value))
+  }
+}
+corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info2)[4:8]),v2=factor(v2,levels=colnames(info2)[4:8]))
+ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
+  geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
+  scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
+  geom_text(aes(label=round(corr,2)))
 
-
-
-
-
-
+info3=info2%>%dplyr::group_by(Experiment)%>%dplyr::summarise(`Significative class`=mean(`Significative class`),`Number of motifs`=mean(`Number of motifs`),
+                                                             `Number of regions`=unique(`Number of regions`),`Average IC`=unique(`Average IC`),
+                                                             `-log10(Fisher)`=mean(`-log10(Fisher)`),`Number of clusters`=n())
+corrs=data.frame()
+for(k in 2:6){
+  for (w in (k+1):7){
+    a1=data.frame(info3)[,k]
+    a2=data.frame(info3)[,w]
+    t=cor.test(a1,a2)
+    corrs=rbind(corrs,data.frame(v1=colnames(info3)[k],v2=colnames(info3)[w],corr=t$estimate,pval=t$p.value))
+  }
+}
+corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info3)[2:7]),v2=factor(v2,levels=colnames(info3)[2:7]))
+ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
+  geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
+  scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
+  geom_text(aes(label=round(corr,2)))
 
 
 length(unique(res$Exp))
