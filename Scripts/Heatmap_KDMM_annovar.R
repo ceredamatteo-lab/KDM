@@ -151,10 +151,11 @@ info2=res2
 info2$n_sign <- rowSums(info2[, 3:15] < th, na.rm = TRUE)
 info2=info2%>%dplyr::select(Exp,Cluster,Fisher.Method,n_sign)
 info2=merge(info2,info_cl[,2:3],by="Cluster")
-info2=merge(info2%>%dplyr::rename(Experiment=2),info[,c("Experiment","nTrainPeaks","IC.mean")],by="Experiment",all.x = TRUE)
+info2=merge(info2%>%dplyr::rename(Experiment=2),info[,c("Experiment","cell","nTrainPeaks","IC.mean")],by="Experiment",all.x = TRUE)
 info2$Fisher.Method[info2$Fisher.Method==0]=.Machine$double.xmin
 info2$log_fisher=-log10(info2$Fisher.Method)
-info2=info2%>%dplyr::rename(`Significative classes`=n_sign,`Number of motifs`=N.motifs,`Average IC`=IC.mean,`Number of regions`=nTrainPeaks,`-log10(Fisher)`=log_fisher)
+info2=info2%>%dplyr::rename(`Significative classes`=n_sign,`Number of motifs`=N.motifs,`Average IC`=IC.mean,`Number of regions`=nTrainPeaks,`-log10(Fisher)`=log_fisher)%>%
+  relocate(cell, .after = last_col())
 
 corrs=data.frame()
 for(k in 4:7){
@@ -165,11 +166,20 @@ for(k in 4:7){
     corrs=rbind(corrs,data.frame(v1=colnames(info2)[k],v2=colnames(info2)[w],corr=t$estimate,pval=t$p.value))
   }
 }
-corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info2)[4:8]),v2=factor(v2,levels=colnames(info2)[4:8]))
+corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info2)[4:8]),v2=factor(v2,levels=colnames(info2)[4:8]))%>%
+  mutate(
+    p_stars = case_when(
+      pval < 0.001 ~ "***",
+      pval < 0.01  ~ "**",
+      pval < 0.05  ~ "*",
+      TRUE         ~ ""
+    )
+  )
 p1=ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
   geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
   scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
-  geom_text(aes(label=round(corr,2)))+ggtitle("")+ggtitle("Cluster correlations")
+  #geom_text(aes(label=round(corr,2)))
+  geom_text(aes(label = paste0(round(corr, 2), "\n", p_stars)),size = 4)+ggtitle("")+ggtitle("Cluster correlations")
 
 info3=info2%>%dplyr::group_by(Experiment)%>%dplyr::summarise(`Average\nSignificative classes`=mean(`Significative classes`),`Average\nNumber of motifs`=mean(`Number of motifs`),
                                                              `Number of regions`=unique(`Number of regions`),`Average IC`=unique(`Average IC`),
@@ -183,11 +193,20 @@ for(k in 2:6){
     corrs=rbind(corrs,data.frame(v1=colnames(info3)[k],v2=colnames(info3)[w],corr=t$estimate,pval=t$p.value))
   }
 }
-corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info3)[2:7]),v2=factor(v2,levels=colnames(info3)[2:7]))
+corrs=corrs%>%mutate(Sign= pval<=th,v1=factor(v1,levels=colnames(info3)[2:7]),v2=factor(v2,levels=colnames(info3)[2:7]))%>%
+  mutate(
+    p_stars = case_when(
+      pval < 0.001 ~ "***",
+      pval < 0.01  ~ "**",
+      pval < 0.05  ~ "*",
+      TRUE         ~ ""
+    )
+  )
 p2=ggplot(corrs,aes(x=v1,y=v2,fill=corr,alpha=Sign))+
   geom_tile(col="grey60")+scale_fill_gradient2(low = "navy",high = "firebrick",mid = "white",midpoint = 0)+
   scale_alpha_manual(values = c(0,1), guide = "none")+coord_equal()+theme_minimal()+theme(axis.title = element_blank(),panel.grid = element_blank())+
-  geom_text(aes(label=round(corr,2)))+ggtitle("Experiment correlations")
+  #geom_text(aes(label=round(corr,2)))
+  geom_text(aes(label = paste0(round(corr, 2), "\n", p_stars)),size = 4)+ggtitle("Experiment correlations")
 
 ggarrange(p1,p2,nrow = 1,align = "h")
 
