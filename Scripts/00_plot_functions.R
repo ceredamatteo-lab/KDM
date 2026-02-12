@@ -40,11 +40,11 @@ get_binom_test=function(data,condition,adjust=TRUE){
 }
 
 get_summary=function(data,motifs,reference,tool,classes_sel){
-	mm=melt(data%>%mutate(ID=row_number()),id.vars="ID")%>%
-	filter(value%in%classes_sel)%>%
-  mutate(value=factor(value,levels=rev(classes_sel))) %>%count(variable, value)%>%
-  group_by(variable)%>%mutate(tot=sum(n),prop = n / tot)%>%
-  arrange(variable, desc(value))%>%mutate(cum=cumsum(n),cprop=cumsum(prop),label = paste0(n,"(",round(prop * 100), "%)"),ypos = cumsum(prop) - prop / 2)
+	mm=melt(data%>%dplyr::mutate(ID=row_number()),id.vars="ID")%>%
+	  dplyr::filter(value%in%classes_sel)%>%
+	  dplyr::mutate(value=factor(value,levels=rev(classes_sel))) %>%dplyr::count(variable, value)%>%
+	  dplyr::group_by(variable)%>%dplyr::mutate(tot=sum(n),prop = n / tot)%>%
+	  dplyr::arrange(variable, desc(value))%>%dplyr::mutate(cum=cumsum(n),cprop=cumsum(prop),label = paste0(n,"(",round(prop * 100), "%)"),ypos = cumsum(prop) - prop / 2)
 
 	mm$Motifs<-NA
 	mm$Reference<-NA
@@ -61,11 +61,11 @@ get_summary=function(data,motifs,reference,tool,classes_sel){
 
 get_jaccard=function(data,classes_sel){
 	tmp=data.frame(table(data[,1],data[,2]))%>%
-	  mutate(Var1=factor(Var1,levels=classes_sel),
+	  dplyr::mutate(Var1=factor(Var1,levels=classes_sel),
 		 Var2=factor(Var2,levels=classes_sel))
-	tmp=merge(tmp,tmp%>%group_by(Var1)%>%summarise(tot.Var1=sum(Freq)),by="Var1") 
-	tmp=merge(tmp,tmp%>%group_by(Var2)%>%summarise(tot.Var2=sum(Freq)),by="Var2") 
-	tmp=tmp%>%mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+	tmp=merge(tmp,tmp%>%dplyr::group_by(Var1)%>%dplyr::summarise(tot.Var1=sum(Freq)),by="Var1") 
+	tmp=merge(tmp,tmp%>%dplyr::group_by(Var2)%>%dplyr::summarise(tot.Var2=sum(Freq)),by="Var2") 
+	tmp=tmp%>%dplyr::mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
 	
 	return(tmp)
 }
@@ -107,7 +107,8 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 	  jaccard=get_jaccard(data,classes_sel)
 	  p2=ggplot(jaccard,aes(x=Var1,y=Var2,fill=Jaccard))+
 	  scale_y_discrete(limits=rev)+
-	  geom_point(col="black",shape=21,size=9)+
+	    geom_tile()+
+	  #geom_point(col="black",shape=21,size=9)+
 	  coord_equal()+
 	  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
 	  theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1))+
@@ -123,7 +124,8 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 	  	jaccard=get_jaccard(data2,classes_sel)
 	  	p2=ggplot(jaccard,aes(x=Var1,y=Var2,fill=Jaccard))+
 		  scale_y_discrete(limits=rev)+
-		  geom_point(col="black",shape=21,size=9)+
+	  	  geom_tile()+
+		  #geom_point(col="black",shape=21,size=9)+
 		  coord_equal()+
 		  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
 		  theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1))+

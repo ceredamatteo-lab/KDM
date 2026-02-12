@@ -247,7 +247,7 @@ saveRDS(tt3,"RBP/Paper_Figure/P22.rds")
 
 # P22 PLOT ----
 
-if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
+if(Sys.info()['nodename'] == "Matteos-Air"){
   setwd("/Users/tbecchi/Desktop/repository/KDM/")
   data_folder="Rdata/Paper_Figure/"
   plot_folder="Figure/Paper_Figure/"
@@ -259,10 +259,20 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
   script_folder="PARTI_FIGURE/"
 }
 source(paste0(script_folder,"00_plot_functions.R"))
-result=readRDS(paste0(data_folder,"P22.rds"))[,2:1]
-
+#result=readRDS(paste0(data_folder,"P22.rds"))[,2:1]
+## RBP ----
+result=readRDS(paste0(data_folder,"classification_ENCODE.rds"))[,2:1]
 p3<-plotClassification(result,"KDM",7)
+pdf(paste0(plot_folder,"P22_new_RBP.pdf"),height = 8,width = 10)
+ggarrange(plotlist=p3,nrow=1)
+dev.off()
 
-pdf(paste0(plot_folder,"P22_RBP.pdf"),height = 8,width = 10)
+## TF ----
+load(paste0(data_folder,"class_sel_meme_memeall_tomtom.Rdata"))
+load(paste0(data_folder,"class_sel_kdm_wall_kdmtom.Rdata"))
+result=data.frame(class_sel_kdm_wall_kdmtom=class_sel_kdm_wall_kdmtom$kdm_cat,
+                  class_sel_meme_memeall_tomtom=class_sel_meme_memeall_tomtom$meme_cat)
+p3<-plotClassification(result,"kdm",7)
+pdf(paste0(plot_folder,"P22_new_TF.pdf"),height = 8,width = 10)
 ggarrange(plotlist=p3,nrow=1)
 dev.off()

@@ -18,7 +18,7 @@ if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
 }
 
 
-auc=readRDS(paste0(data_folder,"p8.rds"))
+auc=readRDS(paste0(data_folder,"p8_new.rds"))%>%dplyr::select(-KDM.AUC)%>%dplyr::rename(KDM.AUC=KDM.new)
 
 auc_mean=auc[,c(1,grep("AUC",colnames(auc)))]
 auc_mean=melt(auc_mean,id.vars = "Experiment")
