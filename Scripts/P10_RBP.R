@@ -221,8 +221,8 @@ save(file="RBP/Paper_Figure/p10.Rdata",jaccard,selcen)
 
 # P10.PLOT ----
 library(dplyr)
-library(ggplot2)
-library(ggpubr)
+library(ggplot2,lib.loc="/adat/usr/Fedora33/Rlib/")
+library(ggpubr,lib.loc="/adat/usr/Fedora33/Rlib/")
 library(irr)
 
 if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
@@ -252,15 +252,21 @@ for(i in c(3,2,1,5,4)){
     group_by(class.kdm) %>% mutate(tot.Var2 = sum(Freq)) %>% ungroup() %>%
     mutate(Jaccard = Freq / (tot.Var1 + tot.Var2 - Freq))
   kk=kappa2(data.frame(d$class.centrimo, d$class.kdm))$value
+  
   plots2[[length(plots2)+1]]=ggplot(tmp,aes(x=class.kdm,y=class.centrimo,fill=Jaccard))+
     scale_y_discrete(limits=rev)+
-    geom_point(col="black",shape=21,size=9)+
+    geom_tile(col="black")+
     coord_equal()+
-    geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "purple")+theme_bw()+
-    theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1),plot.title = element_text(size=8))+
-    ylab("Centrimo")+xlab("KDM.Centrimo")+ggtitle(paste0("K.Cohen coefficient: ",round(kk,3)))
+    geom_text(aes(label=Freq))+
+    scale_fill_gradient2(low = "white",high = "purple4",mid="pink",midpoint=0.4)+
+    theme_minimal()+
+    theme(panel.grid = element_blank(),
+      axis.text.x = element_text(angle=45,hjust=1,size=10),
+      axis.text.y = element_text(size=10),
+      plot.title = element_text(size=12))+
+    ylab("Centrimo")+xlab("KDMMap")+ggtitle(paste0("K.Cohen coefficient: ",round(kk,3)))
 }
 
-pdf(paste0(plot_folder,"P10_RBP.pdf"),height = 5,width = 5)
+#pdf(paste0(plot_folder,"P10_RBP.pdf"),height = 5,width = 5)
 plots2[[5]]
-dev.off()
+#dev.off()

@@ -59,16 +59,33 @@ get_summary=function(data,motifs,reference,tool,classes_sel){
 	return(mm)
 }
 
-get_jaccard=function(data,classes_sel){
-	tmp=data.frame(table(data[,1],data[,2]))%>%
-	  dplyr::mutate(Var1=factor(Var1,levels=classes_sel),
-		 Var2=factor(Var2,levels=classes_sel))
-	tmp=merge(tmp,tmp%>%dplyr::group_by(Var1)%>%dplyr::summarise(tot.Var1=sum(Freq)),by="Var1") 
-	tmp=merge(tmp,tmp%>%dplyr::group_by(Var2)%>%dplyr::summarise(tot.Var2=sum(Freq)),by="Var2") 
-	tmp=tmp%>%dplyr::mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
-	
-	return(tmp)
+#get_jaccard=function(data,classes_sel){
+#	tmp=data.frame(table(data[,1],data[,2]))%>%
+#	  dplyr::mutate(Var1=factor(Var1,levels=classes_sel),
+#		 Var2=factor(Var2,levels=classes_sel))
+#	tmp=merge(tmp,tmp%>%dplyr::group_by(Var1)%>%dplyr::summarise(tot.Var1=sum(Freq)),by="Var1") 
+#	tmp=merge(tmp,tmp%>%dplyr::group_by(Var2)%>%dplyr::summarise(tot.Var2=sum(Freq)),by="Var2") 
+#	tmp=tmp%>%dplyr::mutate(Jaccard=Freq/(tot.Var1+tot.Var2-Freq))
+#	
+#	return(tmp)
+#}
+get_jaccard = function(data, classes_sel){
+  
+  library(dplyr)
+  library(tidyr)
+  
+  data.frame(table(data[,1], data[,2])) %>%
+    complete(Var1 = classes_sel, Var2 = classes_sel, fill = list(Freq = 0)) %>%
+    group_by(Var1) %>%
+    mutate(tot.Var1 = sum(Freq)) %>%
+    group_by(Var2) %>%
+    mutate(tot.Var2 = sum(Freq)) %>%
+    ungroup() %>%
+    mutate(Jaccard = ifelse(tot.Var1 + tot.Var2 - Freq == 0, 0,
+                            Freq/(tot.Var1 + tot.Var2 - Freq)))
 }
+
+
 
 plotClassification<-function(data,condition,sel,adjust=TRUE){
 	classes=c("(0,1]","(1,3]","(3,10]","(10,Inf]","No match to target","No central motifs","Target not in reference")
@@ -105,12 +122,15 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 	    
 	  if(ncol(data)==2){
 	  jaccard=get_jaccard(data,classes_sel)
+	  jaccard$Var1=factor(jaccard$Var1,levels=classes_sel)
+	  jaccard$Var2=factor(jaccard$Var2,levels=classes_sel)
 	  p2=ggplot(jaccard,aes(x=Var1,y=Var2,fill=Jaccard))+
+	    #scale_x_discrete(drop = TRUE) +
 	  scale_y_discrete(limits=rev)+
 	    geom_tile()+
 	  #geom_point(col="black",shape=21,size=9)+
 	  coord_equal()+
-	  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "forestgreen")+theme_bw()+
+	  geom_text(aes(label=Freq))+scale_fill_gradient(low = "white",high = "darkgreen")+theme_bw()+
 	  theme(panel.grid = element_blank(),axis.text.x = element_text(angle=45,hjust=1))+
 	  xlab(colnames(data)[1])+ylab(colnames(data)[2])
 	  

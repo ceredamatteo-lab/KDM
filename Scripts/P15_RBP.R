@@ -78,7 +78,7 @@ saveRDS(classification,"RBP/Paper_Figure/p15.rds")
 
 ## P15.PLOT ----
 
-if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local"){
+if(Sys.info()['nodename'] == "Matteos-MacBook-Air.local" ){
   setwd("/Users/tbecchi/Desktop/repository/KDM/")
   data_folder="Rdata/Paper_Figure/"
   plot_folder="Figure/Paper_Figure/"
