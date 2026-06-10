@@ -1,0 +1,3 @@
+# Windows: run configure.win first (requires CMake + MinGW in PATH)
+PKG_CPPFLAGS = -Igeco2/include
+PKG_LIBS     = -Lgeco2_build -lgeco2

@@ -1,0 +1,4 @@
+#!/bin/sh
+rm -rf src/geco2_build
+rm -f  src/Makevars
+rm -rf inst/lib

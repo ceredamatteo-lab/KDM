@@ -1,0 +1,134 @@
+#!/bin/sh
+set -e
+
+# ── Parse configure arguments ─────────────────────────────────────────────────
+# Accepts both environment variable and --with-*/--without-* style arguments
+# so the flag can be set from all R installation methods:
+#
+#   install.packages(..., configure.args = "--without-cuda")
+#   install.packages(..., configure.vars = "GECO2_ENABLE_CUDA=OFF")
+#   R CMD INSTALL --configure-args="--without-cuda" .
+#   R CMD INSTALL --configure-vars="GECO2_ENABLE_CUDA=OFF" .
+#   GECO2_ENABLE_CUDA=OFF R CMD INSTALL .
+
+ENABLE_CUDA=ON   # default
+
+for arg in "$@"; do
+    case "$arg" in
+        --without-cuda|--with-cuda=no|--with-cuda=off|--with-cuda=OFF)
+            ENABLE_CUDA=OFF ;;
+        --with-cuda|--with-cuda=yes|--with-cuda=on|--with-cuda=ON)
+            ENABLE_CUDA=ON ;;
+    esac
+done
+
+# Also honour the environment variable (set via configure.vars or directly)
+if [ -n "${GECO_ENABLE_CUDA}" ]; then
+    ENABLE_CUDA="${GECO_ENABLE_CUDA}"
+fi
+
+echo "CUDA enabled  : ${ENABLE_CUDA}"
+
+# ── Locate cmake ──────────────────────────────────────────────────────────────
+if ! command -v cmake > /dev/null 2>&1; then
+    echo "------------------------------------------------------------"
+    echo "ERROR: 'cmake' not found in PATH."
+    echo "Please install CMake >= 3.18 and re-run the installation."
+    echo "------------------------------------------------------------"
+    exit 1
+fi
+
+echo "Found: $(cmake --version | head -1)"
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+PKG_ROOT=$(pwd)
+CMAKE_SOURCE_DIR="${PKG_ROOT}/src/geco2"
+CMAKE_BUILD_DIR="${PKG_ROOT}/src/geco2_build"
+
+echo "Package root  : ${PKG_ROOT}"
+echo "CMake source  : ${CMAKE_SOURCE_DIR}"
+echo "CMake build   : ${CMAKE_BUILD_DIR}"
+
+# ── CUDA compiler hint ────────────────────────────────────────────────────────
+# If nvcc is not in PATH, pass the path explicitly:
+#   CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc R CMD INSTALL .
+CUDA_COMPILER_FLAG=""
+if [ -n "${CMAKE_CUDA_COMPILER}" ]; then
+    CUDA_COMPILER_FLAG="-DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}"
+    echo "CUDA compiler : ${CMAKE_CUDA_COMPILER}"
+fi
+
+# ── CUDA architecture hint ────────────────────────────────────────────────────
+# Override at install time:
+#   CUDA_ARCHITECTURES="75;80" R CMD INSTALL .
+CUDA_ARCH_FLAG=""
+if [ -n "${CUDA_ARCHITECTURES}" ]; then
+    CUDA_ARCH_FLAG="-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES}"
+    echo "CUDA archs    : ${CUDA_ARCHITECTURES}"
+fi
+
+# ── Isolate cmake from R's compiler environment ───────────────────────────────
+# R CMD INSTALL exports CFLAGS, CXXFLAGS, LDFLAGS etc. into the environment.
+# These are intended for R's own compilation step (wrapper.cpp) not for cmake.
+# If they leak into cmake they change how libgeco2.so is compiled and can cause
+# crashes in functions that work fine in a standalone build.
+# We unset them here so cmake uses only its own Release flags.
+unset CFLAGS
+unset CXXFLAGS
+unset CPPFLAGS
+unset LDFLAGS
+unset FFLAGS
+unset FCFLAGS
+
+
+# ── CMake configure ───────────────────────────────────────────────────────────
+mkdir -p "${CMAKE_BUILD_DIR}"
+cmake \
+    -S "${CMAKE_SOURCE_DIR}" \
+    -B "${CMAKE_BUILD_DIR}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGECO_ENABLE_CUDA=${ENABLE_CUDA} \
+    ${CUDA_COMPILER_FLAG} \
+    ${CUDA_ARCH_FLAG}
+# ── Build ─────────────────────────────────────────────────────────────────────
+cmake --build "${CMAKE_BUILD_DIR}" --parallel
+
+# ── Detect platform suffix ────────────────────────────────────────────────────
+case "$(uname -s)" in
+    Darwin) SO_EXT="dylib" ;;
+    *)      SO_EXT="so"    ;;
+esac
+
+SO_FILE="${CMAKE_BUILD_DIR}/libgeco2.${SO_EXT}"
+echo "CMake build complete: ${SO_FILE}"
+
+# ── Bundle the .so into inst/lib/ ─────────────────────────────────────────────
+# R installs everything under inst/ into the package tree, so the .so ends up
+# at <pkg>/lib/libgeco2.so — exactly where the $$ORIGIN/../lib rpath points.
+#
+# We copy ALL .so / .dylib files (the real file and any soname symlinks) so
+# the dynamic loader can find whichever name was embedded as the soname.
+mkdir -p "${PKG_ROOT}/inst/libs"
+cp -P "${CMAKE_BUILD_DIR}"/libgeco2*.${SO_EXT}* "${PKG_ROOT}/inst/libs/" 2>/dev/null || \
+    cp    "${SO_FILE}" "${PKG_ROOT}/inst/libs/"
+echo "inst/libs contents:"
+ls -la "${PKG_ROOT}/inst/libs/"
+
+# ── Write src/Makevars ────────────────────────────────────────────────────────
+# Derive the final installed lib/ path so we can bake it in as a third rpath.
+# R_LIBRARY_DIR is set by R CMD INSTALL; fall back to a reasonable default.
+if [ -z "${R_LIBRARY_DIR}" ]; then
+    R_LIBRARY_DIR=$(Rscript --vanilla -e 'cat(.libPaths()[1])' 2>/dev/null || echo "")
+fi
+INSTALL_LIB_DIR="${R_LIBRARY_DIR}/rkdMotifs/lib"
+
+sed \
+    -e "s|@PKG_ROOT@|${PKG_ROOT}|g" \
+    -e "s|@CMAKE_BUILD_DIR@|${CMAKE_BUILD_DIR}|g" \
+    -e "s|@INSTALL_LIB_DIR@|${INSTALL_LIB_DIR}|g" \
+    "${PKG_ROOT}/src/Makevars.in" > "${PKG_ROOT}/src/Makevars"
+
+echo "Wrote src/Makevars"
+echo "--- src/Makevars contents ---"
+cat "${PKG_ROOT}/src/Makevars"
+echo "-----------------------------"

@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+if ! command -v cmake > /dev/null 2>&1; then
+    echo "ERROR: cmake not found. Install CMake >= 3.18 and ensure it is in PATH."
+    exit 1
+fi
+
+PKG_ROOT=$(pwd)
+CMAKE_BUILD_DIR="${PKG_ROOT}/src/geco2_build"
+
+mkdir -p "${CMAKE_BUILD_DIR}"
+
+cmake \
+    -S "${PKG_ROOT}/src/geco2" \
+    -B "${CMAKE_BUILD_DIR}" \
+    -G "MinGW Makefiles" \
+    -DCMAKE_BUILD_TYPE=Release
+
+cmake --build "${CMAKE_BUILD_DIR}" --parallel
+
+sed \
+    -e "s|@PKG_ROOT@|${PKG_ROOT}|g" \
+    -e "s|@CMAKE_BUILD_DIR@|${CMAKE_BUILD_DIR}|g" \
+    "${PKG_ROOT}/src/Makevars.in" > "${PKG_ROOT}/src/Makevars.win"
+
+echo "Windows CMake build complete."

@@ -1,0 +1,64 @@
+useDynLib(rkdMotifs, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+
+export( setCudaUsage )
+export( setVerbosity )
+export( setNCores )
+export ( setgMethodsSeed )
+
+
+export( kdmReadBedFile )
+#export( kdmTestConvertNarrowPeak )
+export( kdmRemoveOverlappingEntries )
+export( kdmGetSequence )
+export( kdmBackground )
+
+export( kdmDistr )
+export( kdmDistrProfile )
+export( kdmGkmersString )
+
+export( kdmMotifs )
+export( kdmMotifsFromSequences)
+export( kdmEstimateMotifs )
+export( kdmMotifsFromPWM )
+#export( kdmMotifsFromPWM2 )
+#export( kdmGetPWMThresholds )
+
+#export( kdmMotifsReduce )
+#export( kdmClusterMotifs )
+#export( kdmRankInfo )
+export( kdmGetW0 )
+export( kdmSilhouette )
+export( kdmMergeKdmotifs )
+export( kdmMergeKdistr )
+
+export( kdmBuildModel )
+#export( kdmPredict )
+
+export( kdmFeatures )
+export( kdmFeaturesProfile )
+
+export( kdmSimilarity )
+export( kdmDistance )
+#export( kdmModelsCorrelation )
+#export( kdmModelsCorrelation2 )
+export( kdmLoadPWMSet )
+#export( kdmFeaturesFromPWMSet )
+#export( kdmFeaturesProfileFromPWMSet )
+
+#export( kdmMotifProfiles2 )
+#export( kdmMotifProfiles3 )
+#export( kdmMotifProfiles3_seq )
+#export( kdmGetProfilesParameters )
+#export( kdmMotifProfiles )
+#export( kdmAnnotateMotifs )
+#export( kdmPlotMotifProfiles )
+export( kdmCentrimo )
+export( kdmGetProfileInfo )
+export( kdmGetProfileInfoSeq )
+
+#export( kdmGetPWM )
+
+export(kdmIC)
+export(kdmTomTargetInfo)
+export(kdmTom)
