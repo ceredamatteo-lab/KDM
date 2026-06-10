@@ -1,0 +1,48 @@
+R 
+library(ROCR)
+
+load("DATA/RDATA/METADATA_TF-benchmark.Rdata")
+load("DATA/RDATA/DATASET_TF-benchmark.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+
+
+do.lsgkm<-function(DATA,mode=2,prefix){
+	cat("\tBUILDFILES")
+	pin<-which(DATA$train$label==1)
+	nin<-which(DATA$train$label==0)
+	
+	train.pos.name<-paste(prefix,".train.pos.fa",sep="")
+	train.neg.name<-paste(prefix,".train.neg.fa",sep="")
+	test.name<-paste(prefix,".test.fa",sep="")
+	model.name<-paste(prefix,".model.txt",sep="")
+	out.name<-paste(prefix,".test.txt",sep="")
+	
+	TRS<-DATA$train$sequence
+	cat(file=train.pos.name,paste(">",1:length(pin),"\n",TRS[pin],sep=""),sep="\n")
+	cat(file=train.neg.name,paste(">",1:length(nin),"\n",TRS[nin],sep=""),sep="\n")
+	
+	TES<-DATA$test$sequence
+	cat(file=test.name,paste(">",1:length(TES),"\n",TES,sep=""),sep="\n")
+	cat("\tTRAINING")
+	system(paste("gkmtrain -T 16 -l 10 -k 6 -m 8192 -t",mode,train.pos.name,train.neg.name,prefix,sep=" "))
+	cat("\tTESTING")
+	system(paste("gkmpredict -T 16",test.name,model.name,out.name,sep=" "))
+	RR<-read.delim(out.name,header=F)
+	pp<-prediction(labels=DATA$test$label,predictions=RR$V2)
+    pp
+}
+
+pred_GKM<-data.frame(ACC=rep(NA,nrow(METADATA)),AUROC=NA,AUPRC=NA)
+for(e in 1:length(DATASET)){
+
+    p<-do.lsgkm(DATASET[[e]],prefix="/tmp/gkm")
+	
+    pred_GKM$ACC[e]<-max(performance(p,"acc")@y.values[[1]])
+    pred_GKM$AUROC[e]<-performance(p,measure="auc")@y.values[[1]]
+    pred_GKM$AUPRC[e]<-performance(p,measure="aucpr")@y.values[[1]]
+	
+}
+# save(file=paste0(OUTPUT_dir,"prediction_GKM_TF-benchmark.Rdata"),pred_GKM)
+

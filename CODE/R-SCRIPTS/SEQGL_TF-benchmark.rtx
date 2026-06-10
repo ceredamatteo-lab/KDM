@@ -1,0 +1,70 @@
+R 
+library(ROCR)
+library(SeqGL)
+library(stringr)
+load("DATA/RDATA/METADATA_TF-benchmark.Rdata")
+load("DATA/RDATA/DATASET_TF-benchmark.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+dictionary.file<-"DATA/RDATA/wildcard_dict_kmer8_mismatches2_alpha5_consecutive_mis.Rdata"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+
+build.train.test.data.from.kdm.all<-function(DATA, dictionary.file, select.top.features = TRUE, ...){
+  
+  train.seqs<-DATA$train$sequence
+  test.seqs<-DATA$test$sequence
+  train.labels<-DATA$train$label
+  train.labels[which(train.labels==0)]<--1
+  test.labels<-DATA$test$label
+  test.labels[which(test.labels==0)]<--1
+  
+  show("Building features from dictionary...")
+  features <- build.features.kernels(dictionary.file, c(train.seqs,test.seqs), NULL, FALSE)$features
+  train.features <- features[1:length(train.seqs), ]
+  test.features <- features[(length(train.seqs) + 1):nrow(features),]
+  feature.inds <- NULL
+  if (select.top.features) {
+    show("Selecting top features...")
+    feature.inds <- SeqGL::select.top.features(train.features, train.labels,...)
+    train.features <- train.features[, feature.inds]
+    test.features <- test.features[, feature.inds]
+  }
+  show("Package and return...")
+  results <- list(train.features = train.features, test.features = test.features, 
+                  train.labels = train.labels, test.labels = test.labels, dictionary.file = dictionary.file, 
+                  train.seqs = train.seqs, test.seqs = test.seqs)
+  return(results)
+}
+build.seqGL<-function(DATA,dictionary.file=""){
+    train.test.data<-build.train.test.data.from.kdm.all(DATA,dictionary.file=dictionary.file)
+}
+do.seqGL<-function(train.test.data){
+	clustering.results <- run.clustering (train.test.data$train.features, no.cores=20)
+	lambdas=c(1e-2, 5e-3, 1e-3, 5e-4, 1e-4)
+	param.eval <- group.lasso.eval.parameters (train.test.data$train.features, as.double(train.test.data$train.labels), train.test.data$test.features, as.double(train.test.data$test.labels), clustering.results$groups, lambdas=lambdas,no.cores=20)
+	inds <- which (param.eval$aucs.matrix == max (param.eval$aucs.matrix), arr.ind=TRUE)
+	group.lasso.results <- run.group.lasso (train.test.data$train.features, as.double(train.test.data$train.labels), train.test.data$test.features, as.double(train.test.data$test.labels), clustering.results$groups, param.eval$lambdas[inds[1]], param.eval$lambdas[inds[2]],no.cores=20)
+	group.lasso.results
+}
+
+pred_SEQGL<-data.frame(ACC=rep(NA,nrow(METADATA)),AUROC=NA,AUPRC=NA)
+for(e in 1:nrow(METADATA)){
+
+    sel<-which(str_count(DATASET[[e]]$train$sequence,"N")==0)
+    if(length(sel)>0){DATASET[[e]]$train<-DATASET[[e]]$train[sel,]}
+    sel<-which(str_count(DATASET[[e]]$test$sequence,"N")==0)
+    if(length(sel)>0){DATASET[[e]]$test<-DATASET[[e]]$test[sel,]}
+
+    train.test.data<-build.seqGL(DATASET[[e]],dictionary.file)
+    a<-do.seqGL(train.test.data)
+    p<-a$test.preds
+
+    pred_SEQGL$ACC[e]<-max(performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"acc")@y.values[[1]])
+    pred_SEQGL$AUROC[e]<-performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"auc")@y.values[[1]]
+    pred_SEQGL$AUPRC[e]<-performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"aucpr")@y.values[[1]]
+
+    print(pred_SEQGL[e,])
+}
+
+# save(file=paste0(OUTPUT_dir,"prediction_SEQGL_TF-benchmark.Rdata"),pred_SEQGL)
+

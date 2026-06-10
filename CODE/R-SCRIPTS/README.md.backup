@@ -1,0 +1,42 @@
+# R Scripts
+
+This folder contains all the scripts used to produce the results reported in "**KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction**".
+
+## Dependencies
+All the scripts require our package **rkdMotifs** to be installed (see folder CODE/R-PACKAGE)
+
+The scripts have a number of other dependencies:
+
+###	R packages:
+
+##### From CRAN
+* 	**ROCR**
+* 	**glmnet**
+* 	**doMC**	
+* 	**ggplot2**
+* 	**reshape2**
+* 	**ggpubr**
+* 	**RColorBrewer**
+* 	**dplyr**
+* 	**tidyverse**
+
+##### From Bioconductor
+* 	**universalmotif**
+
+##### From other repositories
+* 	**SeqGL** (https://github.com/ManuSetty/SeqGL)
+
+
+###	Other required non-R tools which need to be installed to execute the scripts:
+
+* 	**GraphProt** (https://github.com/dmaticzka/GraphProt)
+* 	**MEME suite (version 5.4.0)** (https://meme-suite.org/meme/doc/download.html)
+* 	**ls-GKM** (https://github.com/Dongwon-Lee/lsgkm/)
+* 	**RNAProt** (https://github.com/BackofenLab/RNAProt)
+
+
+## SCRIPTS DESCRIPTION
+
+To execute the scripts you need to set your R working directory to the CODE folder of this 
+
+	

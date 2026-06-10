@@ -1,0 +1,215 @@
+R 
+library(rkdMotifs)
+library(glmnet)
+library(cluster)
+library(ROCR)
+library(doMC)
+
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+MODEL_dir<-"models_KDM_TF-ENCODE/"
+kmerlength<-8
+ngaps<-2
+double.strand<-TRUE
+
+### BEGIN KDMFind , KDM-LRLM E KDMMap
+dir.create(paste0(OUTPUT_dir,MODEL_dir))
+
+KDMMap<-function(pinfo,sig=0.05){
+	tmp<-data.frame(motif=NA,Start=NA,End=NA,max_pos=NA,np_in=NA,np_out=NA,nn_in=NA,nn_out=NA,Centrality=NA,Centrality_p.value=NA,Centrality_q.value=NA,Enrichment=NA,Enrichment_p.value=NA,Enrichment_q.value=NA,bin_location=NA)
+	edf<-tmp[which(!is.na(tmp$motif)),]
+	nmotifs<-length(pinfo$pfeat)
+	centrimo<-kdmCentrimo(pinfo, symmetric = FALSE, tail = "upper")
+	res<-c()		
+	for(mn in 1:nmotifs){
+		E<-centrimo[[mn]]
+		E$Start<-E$Start+pinfo$x[1]
+		E$End<-E$End+pinfo$x[1]
+		E$max_pos<-E$max_pos+pinfo$x[1]
+		E$mean_pos<-E$mean_pos+pinfo$x[1]
+		E$bin_location<-(E$End+E$Start)/2
+		E<-E[which(E$bin_location==0),]
+		
+		E$Centrality_q.value<-p.adjust(E$Centrality_p.value,method="fdr")
+		E$Enrichment_q.value<-p.adjust(E$Enrichment_p.value,method="fdr")
+
+   		sel<-which((E$Centrality_q.value * nmotifs) < sig & E$Centrality>1 & (E$Enrichment_q.value * nmotifs) < sig & E$Enrichment >1)
+		if(length(sel)>0){
+			oo<-sel[order(rank(-log10(E$Centrality_q.value[sel]))+rank(-log10(E$Enrichment_q.value[sel])),-log10(E$Centrality_q.value[sel]),decreasing=TRUE)]
+			res<-rbind(res,data.frame(motif=mn,E[oo[1],]))
+		}
+	}
+	if(!is.null(res)){
+		res<-res[order(rank(-log10(res$Centrality_q.value))+rank(-log10(res$Enrichment_q.value),-log10(res$Centrality_q.value)),decreasing=TRUE),]
+	}else{
+		res<-edf
+	}
+	res
+}
+
+np<-0
+goodclusters<-FALSE
+minrank<-100
+maxrank<-1000
+tol<-1e-6
+parallel<-TRUE
+s<-"lambda.min"
+halfWin<-15
+halfInterval<-150 
+
+win_mod<-data.frame(start=c(1,91,181),end=c(121,211,301))
+
+ce_W<-list()
+pred_KDM<-data.frame(ACC=rep(NA,nrow(METADATA)),AUROC=NA,AUPRC=NA)
+for(e in 1:nrow(METADATA)){
+    DATA<-DATASET[[e]]
+    seqs<-kdmGetSequence(DATA$train,file.name=genome)
+    CC<-kdmDistr(data=seqs,kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)  
+
+##KDMFind
+    W0<-kdmGetW0(CC,"complete",good.clusters=goodclusters,min.rank=minrank,max.rank=maxrank,bhattacharyya=FALSE,use.float=FALSE)
+    W<-kdmMotifs(CC,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+
+    C1<-kdmDistr(data=substr(seqs,win_mod$start[1],win_mod$end[1]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)
+    C3<-kdmDistr(data=substr(seqs,win_mod$start[3],win_mod$end[3]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)
+    CL <- new("kdistr",sqrt((C1^2+C3^2)/2),l=C1@l,k=C1@k,doubleStrand=C1@doubleStrand,estimated=C1@estimated) 
+    CC<-kdmDistr(data=substr(seqs,win_mod$start[2],win_mod$end[2]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+    FF<-kdmFeatures(motifs=W,data=CC)
+    FL<-kdmFeatures(motifs=W,data=CL)
+
+##KDM-LRLM
+    m<-cv.glmnet(y=DATA$trainLabels,x=cbind(FF,FL), family="binomial",alpha=1,trace.it=TRUE, type.measure="auc",foldid=DATA$ids,parallel=parallel)
+    cc<-matrix(coef(m,s=s)[2:((ncol(W)*2)+1)],ncol(W),2)
+    KDM_MODEL<-kdmBuildModel(W,cc,intercept=rep(coef(m,s=s)[1],2),remove.null.coef=FALSE)
+#     save(file=paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],".Rdata"),KDM_MODEL)
+    
+    seqs<-kdmGetSequence(DATA$test,file.name=genome)
+    C1<-kdmDistr(data=substr(seqs,win_mod$start[1],win_mod$end[1]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)
+    C3<-kdmDistr(data=substr(seqs,win_mod$start[3],win_mod$end[3]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)
+    CL <- new("kdistr",sqrt((C1^2+C3^2)/2),l=C1@l,k=C1@k,doubleStrand=C1@doubleStrand,estimated=C1@estimated) 
+    CC<-kdmDistr(data=substr(seqs,win_mod$start[2],win_mod$end[2]),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+    FF<-kdmFeatures(motifs=W,data=CC)
+    FL<-kdmFeatures(motifs=W,data=CL)
+
+    p<-predict(m,cbind(FF,FL),type="link",s=s)
+    pred_KDM$ACC[e]<-max(performance(prediction(labels=DATA$testLabels,predictions=p),"acc")@y.values[[1]])
+    pred_KDM$AUROC[e]<-performance(prediction(labels=DATA$testLabels,predictions=p),"auc")@y.values[[1]]
+    pred_KDM$AUPRC[e]<-performance(prediction(labels=DATA$testLabels,predictions=p),"aucpr")@y.values[[1]]
+    
+##KDMMap
+    colnames(W)<-1:ncol(W)
+	pinfo<-kdmGetProfileInfo(motifs=W,regions=DATA$train,centers=rep(halfInterval+1,nrow(DATA$train)),labels = DATA$trainLabels,genomeFile = genome,halfInterval=halfInterval,halfWin=halfWin,tolerance = 1e-10,strict = FALSE,use_float=FALSE)
+    ce_W[[e]]<-KDMMap(pinfo=pinfo)
+
+}
+
+### END   KDMFind , KDM-LRLM E KDMMap
+# save(file=paste0(OUTPUT_dir,"prediction_KDM_TF-ENCODE.Rdata"),pred_KDM)
+
+### BEGIN BUILD KDM REFERENCE
+breaks<-c(0,1,3,10,Inf)
+nmax_mot<-5
+
+sel_ref<-which(METADATA$used_in_reference==1)
+count<-1
+ref_KDM_info<-data.frame(name=rep(NA,nrow(METADATA)*nmax_mot),target=NA)
+tmpWs<-matrix(0,57472,nrow(METADATA)*nmax_mot)
+
+for(i in 1:length(sel_ref)){
+    e<-sel_ref[i]
+    load(paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],".Rdata",sep=""))
+    W<-as(mod_kdm,"kdmotifs")
+    colnames(W)<-1:ncol(W)
+    res<-ce_W[[e]]
+    nm<-min(nmax_mot,nrow(res))
+    if(nm>0){
+        tmpWs[,count:(count+nm-1)]<-W[,res$motif[1:nm]]
+        ref_KDM_info$target[count:(count+nm-1)]<-rep(METADATA$target[e],nm)
+        count<-count+nm
+    }
+    cat(e,"\n")
+}
+
+selgood<-which(!is.na(ref_KDM_info$target))
+ref_KDM<-new("kdmotifs",tmpWs[,selgood],l=W@l,k=W@k,doubleStrand=W@doubleStrand,estimated=W@estimated)
+ref_KDM_info<-ref_KDM_info[selgood,]
+TFS<-unique(ref_KDM_info$target)
+for(t in 1:length(TFS)){
+	ss<-which(ref_KDM_info$target==TFS[t])
+	ref_KDM_info$name[ss]<-paste(TFS[t],"-",1:length(ss),sep="")
+}
+colnames(ref_KDM)<-ref_KDM_info$name
+
+ref_KDM_info$experiment<-NA
+ref_KDM_info$motif<-NA
+ref_KDM_info$cell<-NA
+ref_KDM_info$centrality<-NA
+ref_KDM_info$enrichment<-NA
+count<-1
+for(i in 1:length(sel_ref)){
+    e<-sel_ref[i]
+    res<-ce_W[[e]]
+	nm<-min(nmax_mot,nrow(res))
+	if(nm>0){
+        intv<-count:(count+nm-1)
+		ref_KDM_info$experiment[intv]<-rep(METADATA$experiment[e],nm)
+		ref_KDM_info$motif[intv]<-res$motif[1:nm]
+		ref_KDM_info$cell[intv]<-rep(METADATA$cell[e],nm)
+        ref_KDM_info$centrality[intv]<-res$Centrality[1:nm]
+		ref_KDM_info$enrichment[intv]<-res$Enrichment[1:nm]
+        count<-count+nm
+    }
+}
+
+### END   BUILD KDM REFERENCE
+# save(file=paste0(OUTPUT_dir,"reference_KDM_TF-ENCODE.Rdata"),ref_KDM,ref_KDM_info)
+
+### BEGIN KDMMatch
+sel_class<-which(METADATA$used_in_reference==0)
+
+ref_KDM_tinfo<-kdmTomTargetInfo(ref_KDM)
+ref_KDM_TFS<-unique(ref_KDM_info$target)
+class<-data.frame(target=METADATA$target[sel_class],experiment=METADATA$experiment[sel_class],kdm_cat="No match to target",kdm=NA)
+for(i in 1:length(sel_class)){
+	en<-sel_class[i]
+	if(METADATA$target[en] %in% ref_KDM_TFS){
+		if(nrow(ce_W[[en]])>0){
+			load(paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[en],".Rdata",sep=""))
+            W<-as(mod_kdm,"kdmotifs")
+            W1<-W[,ce_W[[en]]$motif]
+			colnames(W1)<-1:ncol(W1)
+			cl1<-kdmTom(W1,ref_KDM,best.hit=FALSE,threshold=0.05,targetInfo=ref_KDM_tinfo)
+			cl1$target2<-ref_KDM_info$target[match(cl1$target,ref_KDM_info$name)]
+			if(length(cl1)>1){
+				cl1<-cl1[which(as.numeric(cl1$query)<=nmax_mot),]
+				cl1<-cl1[which( (cl1$q.value * min(nmax_mot,ncol(W1))) < 0.05),]
+				if(nrow(cl1)>0){
+					qq<-unique(cl1$query)
+					cl1$rank<-NA
+					for(q in 1:length(qq)){
+						ss<-which(cl1$query == qq[q])
+						cl1$rank[ss]<-1:length(ss)
+					}
+					sa<-which(cl1$target2==METADATA$target[en])
+					if(length(sa)>0){
+						s<-sa[which.min(cl1$rank[sa])]
+						class$kdm_cat[i]<-as.character(cut(min(cl1$rank[sa]),breaks))
+						class$kdm[i]<-min(cl1$rank[sa])
+					}
+				}
+			}
+		}else{
+			class$kdm_cat[i]<-"No central motifs"
+		}
+	}else{
+		class$kdm_cat[i]<-"Target not in reference"
+	}
+	print(class[i,])
+}
+
+### END   KDMMatch
+# save(file=paste0(OUTPUT_dir,"classification_KDM_TF-ENCODE.Rdata"),class)
+

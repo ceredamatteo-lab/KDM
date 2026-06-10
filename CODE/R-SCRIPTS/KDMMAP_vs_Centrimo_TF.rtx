@@ -1,0 +1,126 @@
+R 
+library(rkdMotifs)
+library(universalmotif)
+
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+OUTPUT_dir<-"DATA/RESULTS/"
+
+kmerlength<-8
+ngaps<-2
+double.strand<-TRUE
+
+read_centrimo<-function(file){
+		ctm<-read.delim(file,header=TRUE,stringsAsFactors=FALSE,row.names=NULL,comment.char="#")
+		ctm2<-ctm[,1:(ncol(ctm)-1)]
+		colnames(ctm2)<-colnames(ctm[,2:ncol(ctm)])
+		ctm2
+}
+KDMMap<-function(pinfo,sig=0.05,mnames){
+	tmp<-data.frame(motif=NA,Start=NA,End=NA,max_pos=NA,np_in=NA,np_out=NA,nn_in=NA,nn_out=NA,Centrality=NA,Centrality_p.value=NA,Centrality_q.value=NA,Enrichment=NA,Enrichment_p.value=NA,Enrichment_q.value=NA,bin_location=NA)
+	edf<-tmp[which(!is.na(tmp$motif)),]
+	nmotifs<-length(pinfo$pfeat)
+	
+	centrimo<-kdmCentrimo(pinfo, symmetric = FALSE, tail = "upper")
+	
+	res<-c()		
+	for(mn in 1:nmotifs){
+		E<-centrimo[[mn]]
+		E$Start<-E$Start+pinfo$x[1]
+		E$End<-E$End+pinfo$x[1]
+		E$max_pos<-E$max_pos+pinfo$x[1]
+		E$mean_pos<-E$mean_pos+pinfo$x[1]
+		E$bin_location<-(E$End+E$Start)/2
+		E<-E[which(E$bin_location==0),]
+		
+		E$Centrality_q.value<-p.adjust(E$Centrality_p.value,method="fdr")
+		E$Enrichment_q.value<-p.adjust(E$Enrichment_p.value,method="fdr")
+		#E$Centrality_q.value<-E$Centrality_p.value * nrow(E)
+
+   		sel<-which((E$Centrality_q.value * nmotifs) < sig & E$Centrality>1 & (E$Enrichment_q.value * nmotifs) < sig & E$Enrichment >1)
+		if(length(sel)>0){
+			oo<-sel[order(rank(-log10(E$Centrality_q.value[sel]))+rank(-log10(E$Enrichment_q.value[sel])),-log10(E$Centrality_q.value[sel]),decreasing=TRUE)]
+			res<-rbind(res,data.frame(motif=mn,E[oo[1],]))
+		}
+	}
+	if(!is.null(res)){
+		res<-res[order(rank(-log10(res$Centrality_q.value))+rank(-log10(res$Enrichment_q.value),-log10(res$Centrality_q.value)),decreasing=TRUE),]
+	}else{
+		res<-edf
+	}
+	res$mname<-mnames[res$motif]
+    res 
+}
+
+Centrimo_dir<-"/tmp/Centrimo_results/"
+system(paste0("mkdir ",Centrimo_dir))
+
+load("DATA/RDATA/H13INVIVO.Rdata")
+h13_tinfo<-kdmTomTargetInfo(h13_W)
+h13_TFS<-unique(h13_info$masterlist_info.species.HUMAN.gene_symbol)
+queryfile<-"DATA/SUPPORT_FILES/H13INVIVO.meme"
+
+
+halfWin<-15
+selexp<-which(METADATA$target %in% h13_TFS)
+
+class<-data.frame(target=METADATA$target[selexp],cell=METADATA$cell[selexp],ncentrimo=NA,nkdm=NA,int=NA,union=NA,j=NA,rank_centrimo=NA,rank_kdmmap=NA)
+for(i in 1:length(selexp)){
+	e<-selexp[i]
+    tmat<-h13_info$name[which(h13_info$masterlist_info.species.HUMAN.gene_symbol==METADATA$target[e])]
+    
+##Centrimo
+    seqs<-kdmGetSequence(DATASET[[e]]$train,file.name=genome)
+    spos<-seqs[which(DATASET[[e]]$trainLabels==1)]
+    sneg<-seqs[which(DATASET[[e]]$trainLabels==0)]
+    cat(file=paste(Centrimo_dir,"seqs.fa",sep=""),rbind(paste(">S",1:length(seqs),sep=""),seqs),sep="\n")
+    cat(file=paste(Centrimo_dir,"pseqs.fa",sep=""),rbind(paste(">P",1:length(spos),sep=""),spos),sep="\n")
+    cat(file=paste(Centrimo_dir,"nseqs.fa",sep=""),rbind(paste(">N",1:length(sneg),sep=""),sneg),sep="\n")
+    cmd_centrimo<-paste("centrimo --oc ",Centrimo_dir," --neg ",Centrimo_dir,"nseqs.fa ",Centrimo_dir,"pseqs.fa ",queryfile,sep="")
+    system(cmd_centrimo,intern=TRUE,ignore.stderr=TRUE)
+    tmpcentrimo<-read_centrimo(paste(Centrimo_dir,"centrimo.tsv",sep=""))
+    tmpcentrimo$Start=tmpcentrimo$bin_location - tmpcentrimo$bin_width/2
+    tmpcentrimo$End=tmpcentrimo$bin_location + tmpcentrimo$bin_width/2
+       
+    if(nrow(tmpcentrimo)>0){
+        npos<-sum(DATASET[[e]]$trainLabels==1)
+        nneg<-sum(DATASET[[e]]$trainLabels==0)
+        for(j in 1:nrow(tmpcentrimo)){
+            tmpcentrimo$enrichment[j]<-(tmpcentrimo$sites_in_bin[j]/npos)/(tmpcentrimo$neg_sites_in_bin[j]/nneg)
+            tmpcentrimo$enrichment_p.value[j]<-binom.test(x=tmpcentrimo$sites_in_bin[j],n=npos,p=tmpcentrimo$neg_sites_in_bin[j]/nneg,alternative="gr")$p.value
+            tmpcentrimo$enrichment_q.value[j]<-tmpcentrimo$enrichment_p.value[j] * nrow(tmpcentrimo)
+        }
+	}else{
+		tmpcentrimo[1,]<-NA
+		tmpcentrimo$enrichment<-NA
+		tmpcentrimo$enrichment_p.value<-NA
+		tmpcentrimo$enrichment_q.value<-NA
+		tmpcentrimo<-tmpcentrimo[0,]
+	}
+    centrimo<-tmpcentrimo[which(tmpcentrimo$E.value<0.05 & (tmpcentrimo$enrichment_q.value * ncol(h13_W))<0.05),]
+    centrimo<-centrimo[order(rank(-log10(centrimo$E.value))+rank(-log10(centrimo$enrichment_q.value)),-log10(centrimo$E.value),decreasing=TRUE),]
+    
+##KDMMap
+    pinfo<-kdmGetProfileInfo(motifs=h13_W,regions=DATASET[[e]]$train,centers=rep(151,nrow(DATASET[[e]]$train)),labels = DATASET[[e]]$trainLabels,genomeFile = genome,halfInterval=150,halfWin=halfWin,tolerance = 1e-10,strict = FALSE,use_float=FALSE)
+    kdmmap<-KDMMap(pinfo=pinfo,mnames=h13_info$name)
+    
+    a<-kdmmap$mname
+    b<-centrimo$motif_id
+    class$ncentrimo[i]<-length(b)
+    class$nkdm[i]<-length(a)
+    class$int[i]<-length(intersect(a,b))
+    class$union[i]<-length(union(a,b))
+    class$j[i]<-class$int[i]/class$union[i]
+    if(length(tmat)>0){
+        class$rank_centrimo[i]<-min(match(tmat,b),na.rm=TRUE)
+        class$rank_kdmmap[i]<-min(match(tmat,a),na.rm=TRUE)
+    }
+   
+ 	print(METADATA[e,1:5])
+	print(class[i,])
+    
+}
+
+# save(file=paste0(OUTPUT_dir,"classification_KDMMap_Centrimo.Rdata"),class)
+

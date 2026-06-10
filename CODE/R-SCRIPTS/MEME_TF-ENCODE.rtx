@@ -1,0 +1,169 @@
+R
+library(rkdMotifs)
+library(universalmotif)
+library(glmnet)
+library(cluster)
+library(ROCR)
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+MODEL_dir<-"models_MEME_TF-ENCODE/"
+system(paste0("mkdir ",OUTPUT_dir,MODEL_dir)) 
+double.strand<-TRUE
+
+### BEGIN MEME E CENTRIMO
+
+win_mod<-data.frame(start=c(1,91,181),end=c(121,211,301))
+
+for(e in 1:nrow(METADATA)){
+    DATA<-DATASET[[e]]
+    seqs<-kdmGetSequence(DATA$train,file.name=genome)
+    spos<-seqs[which(DATA$trainLabels==1)]
+    sneg<-seqs[which(DATA$trainLabels==0)]	
+
+    mdir<-paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],"/")
+    system(paste("mkdir",mdir))
+    cat(file=paste(mdir,"seqs.fa",sep=""),rbind(paste(">S",1:length(seqs),sep=""),seqs),sep="\n")
+    cat(file=paste(mdir,"pseqs.fa",sep=""),rbind(paste(">P",1:length(spos),sep=""),spos),sep="\n")
+    cat(file=paste(mdir,"nseqs.fa",sep=""),rbind(paste(">N",1:length(sneg),sep=""),sneg),sep="\n")
+    cmds1<-c();
+    cmds1[1]<-"module load mpi/openmpi-x86_64"
+    cmds1[2]<-paste("mpirun meme -oc ",mdir," -revcomp -evt 0.01 -dna ",mdir,"seqs.fa",sep="")
+    cfile<-paste(mdir,"commands1.sh",sep="")
+    cat(file=cfile,cmds1,sep="\n")
+    system(paste("chmod 775 ",cfile,sep=""))
+##MEME
+    system(cfile)
+##CENTRIMO
+    system(paste("centrimo --oc ",mdir," --neg ",mdir,"nseqs.fa ",mdir,"pseqs.fa ",mdir,"meme.meme",sep=""))
+    
+}
+
+### END MEME E CENTRIMO
+
+### BEGIN ADD CLASS ENRICHMENT TO CENTRIMO RESULTS
+read_centrimo<-function(file){
+    ctm<-read.delim(file,header=TRUE,stringsAsFactors=FALSE,row.names=NULL,comment.char="#")
+    ctm2<-ctm[,1:(ncol(ctm)-1)]
+    colnames(ctm2)<-colnames(ctm[,2:ncol(ctm)])
+    ctm2
+}
+
+ce_meme<-list()
+for(e in 1:nrow(METADATA)){
+	trainLabels<-DATASET[[e]]$trainLabels
+    mdir<-paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],"/")
+	tmpcentrimo<-read_centrimo(paste(mdir,"centrimo.tsv",sep=""))
+	
+	if(nrow(tmpcentrimo)>0){
+		npos<-sum(trainLabels==1)
+		nneg<-sum(trainLabels==0)
+		for(i in 1:nrow(tmpcentrimo)){
+			tmpcentrimo$enrichment[i]<-(tmpcentrimo$sites_in_bin[i]/npos)/(tmpcentrimo$neg_sites_in_bin[i]/nneg)
+			tmpcentrimo$enrichment_p.value[i]<-binom.test(x=tmpcentrimo$sites_in_bin[i],n=npos,p=tmpcentrimo$neg_sites_in_bin[i]/nneg,alternative="gr")$p.value
+			tmpcentrimo$enrichment_q.value[i]<-tmpcentrimo$enrichment_p.value[i] * nrow(tmpcentrimo)
+		}
+	}else{
+		tmpcentrimo[1,]<-NA
+		tmpcentrimo$enrichment<-NA
+		tmpcentrimo$enrichment_p.value<-NA
+		tmpcentrimo$enrichment_q.value<-NA
+		tmpcentrimo<-tmpcentrimo[0,]
+	}
+
+    
+    centrimo_app<-tmpcentrimo[which(tmpcentrimo$E.value<0.05 & (tmpcentrimo$enrichment_q.value)<0.05 & tmpcentrimo$enrichment>1),]
+    ce_meme[[e]]<-centrimo_app[order(rank(-log10(centrimo_app$E.value))+rank(-log10(centrimo_app$enrichment_q.value)),-log10(centrimo_app$E.value),decreasing=TRUE),]
+    cat(e,"\n") 
+}
+
+### END   ADD CLASS ENRICHMENT TO CENTRIMO RESULTS
+
+### BEGIN BUILD MEME REFERENCE
+breaks<-c(0,1,3,10,Inf)
+nmax_mot<-5
+
+sel_ref<-which(METADATA$used_in_reference==1)
+tmpRef<-list()
+ref_MEME_info<-c()
+for(i in 1:length(sel_ref)){
+	
+	e<-sel_ref[i]
+	mdir<-paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],"/")
+	meme<-read_meme(file=paste(mdir,"meme.meme",sep=""))
+	ctm<-ce_meme[[e]]
+	nm<-min(nmax_mot,nrow(ctm))
+	if(nm>0){
+        ctm<-ctm[1:nm,]
+		tmpRef<-c(tmpRef,meme[match(ctm$motif_alt_id,unlist(lapply(meme,function(x){x@altname})))])
+		ref_MEME_info<-rbind(ref_MEME_info,data.frame(target=rep(METADATA$target[e],nrow(ctm))))
+    }
+    cat(e,"\n")
+}
+
+aa<-unique(ref_MEME_info$target)
+ref_MEME_info$name<-NA;
+for(i in 1:length(aa)){
+	ss<-which(ref_MEME_info$target==aa[i]);
+	ref_MEME_info$name[ss]<-paste(aa[i],"-",1:length(ss),sep="")
+}
+for(i in 1:length(tmpRef)){
+	tmpRef[[i]]@name<-ref_MEME_info$name[i]
+}
+ref_MEME<-tmpRef
+### END   BUILD MEME REFERENCE
+# write_meme(ref_MEME,file=paste0(OUTPUT_dir,"reference_MEME.meme"),overwrite=TRUE)
+
+### BEGIN TOMTOM
+sel_class<-which(METADATA$used_in_reference==0)
+cmds<-c()
+for(e in sel_class){
+    mdir<-paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],"/")
+    cmds<-c(cmds,paste("tomtom -oc ",mdir," -thresh 0.5 ",mdir,"meme.meme ",OUTPUT_dir,"reference_MEME.meme &",sep=""))
+    cat(e,"\n")
+}
+cfile<-paste0(OUTPUT_dir,"run_tomtom_meme_ref_meme.sh")
+cat(file=cfile,cmds,sep="\n")
+system(paste("chmod 775 ",cfile,sep=""))
+system(cfile)
+
+ref_meme_TFS<-unique(ref_MEME_info$target)
+class<-data.frame(target=METADATA$target[sel_class],experiment=METADATA$experiment[sel_class],meme_cat="No match to target",meme=NA)
+for(i in 1:length(sel_class)){
+	e<-sel_class[i]
+	mdir<-paste0(OUTPUT_dir,MODEL_dir,METADATA$experiment[e],"/")
+	if(METADATA$target[e] %in% ref_meme_TFS){
+		ctm<-ce_meme[[e]]
+ 		if(nrow(ctm)>0){
+            ctm<-ctm[1:min(nrow(ctm),nmax_mot),]
+			tmt<-read.delim(paste(mdir,"/tomtom.tsv",sep=""),header=TRUE,stringsAsFactors=FALSE,comment.char="#")
+			tmt$target<-ref_MEME_info$target[match(tmt$Target_ID,ref_MEME_info$name)]
+			tmt<-tmt[which(tmt$Query_ID %in% ctm$motif_id),]
+			tmt<-tmt[which((tmt$q.value * nrow(ctm))<0.05),]
+			if(nrow(tmt)>0){
+				qq<-unique(tmt$Query_ID)
+				tmt$rank<-NA
+				for(q in 1:length(qq)){
+					ss<-which(tmt$Query_ID == qq[q])
+					tmt$rank[ss]<-1:length(ss)
+				}
+				sa<-which(tmt$target==METADATA$target[e])
+				if(length(sa)>0){
+					s<-sa[which.min(tmt$rank[sa])]
+					class$meme_cat[i]<-as.character(cut(min(tmt$rank[sa]),breaks))
+					class$meme[i]<-min(tmt$rank[sa])
+				}
+			}
+		}else{
+			class$meme_cat[i]<-"No central motifs"
+		}
+	}else{
+		class$meme_cat[i]<-"Target not in reference"
+	}
+	print(class[i,])
+}
+
+### END   TOMTOM
+# save(file=paste0(OUTPUT_dir,"classification_MEME_TF-ENCODE.Rdata"),class)

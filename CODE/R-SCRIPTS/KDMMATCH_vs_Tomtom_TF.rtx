@@ -1,0 +1,107 @@
+R 
+library(rkdMotifs)
+library(universalmotif)
+
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+OUTPUT_dir<-"DATA/RESULTS/"
+
+kmerlength<-8
+ngaps<-2
+double.strand<-TRUE
+
+
+load("DATA/RDATA/METADATA_FACTORBOOK.Rdata")
+fb_pwm<-read_meme("DATA/SUPPORT_FILES/FACTORBOOK.meme")
+
+
+load("DATA/RDATA/H13INVIVO.Rdata")
+h13_tinfo<-kdmTomTargetInfo(h13_W)
+h13_TFS<-unique(h13_info$masterlist_info.species.HUMAN.gene_symbol)
+queryfile<-"DATA/SUPPORT_FILES/H13INVIVO.meme"
+
+Tomtom_dir<-"/tmp/Tomtom_results/"
+system(paste0("mkdir ",Tomtom_dir))
+
+
+cmds<-c()
+for(e in 1:nrow(METADATA)){
+
+    if(METADATA$experiment[e] %in% METADATA_FACTORBOOK$dataset_accession){
+    
+        mdir<-paste0(Tomtom_dir,METADATA$experiment[e],"/")
+        system(paste0("mkdir ",mdir))
+
+        sel_pwm<-which(METADATA_FACTORBOOK$dataset_accession==METADATA$experiment[e])
+        write_meme(fb_pwm[sel_pwm],file=paste0(mdir,"pwm.meme"),overwrite=TRUE)
+
+        cmds<-c(cmds,paste("tomtom -oc ",mdir," -thresh 0.5 ",mdir,"pwm.meme ",queryfile," &",sep=""))
+    }
+    cat(e,"\n")
+}
+
+cat(file=paste0(Tomtom_dir,"run_tomtom_factorbook_h13.sh"),cmds,sep="\n")
+system(paste0("chmod 775 ",Tomtom_dir,"run_tomtom_factorbook_h13.sh"))
+system(paste0(Tomtom_dir,"run_tomtom_factorbook_h13.sh"))
+
+class<-data.frame(target=METADATA$target,experiment=METADATA$experiment,cat_Tomtom="No match to target",rank_Tomtom=NA,cat_KDMMatch="No match to target",rank_KDMMatch=NA)
+for(e in 1:nrow(METADATA)){
+	if(METADATA$target[e] %in% h13_TFS){
+        mdir<-paste0(Tomtom_dir,METADATA$experiment[e],"/")
+		if(file.exists(mdir)){
+			nmeme<-length(kdmLoadPWMSet(paste0(mdir,"pwm.meme")))
+
+##Tomtom 
+            tmt<-read.delim(paste0(mdir,"tomtom.tsv"),header=TRUE,stringsAsFactors=FALSE,comment.char="#")
+			tmt$target<-h13_info$masterlist_info.species.HUMAN.gene_symbol[match(tmt$Target_ID,h13_info$name)]
+            tmt<-tmt[which((tmt$q.value * nmeme)< 0.05),]
+			if(nrow(tmt)){
+				qq<-unique(tmt$Query_ID)
+				tmt$rank<-NA
+				for(q in 1:length(qq)){
+					ss<-which(tmt$Query_ID == qq[q])
+					tmt$rank[ss]<-1:length(ss)
+				}
+				sa<-which(tmt$target==METADATA$target[e])
+				if(length(sa)>0){
+					class$cat_Tomtom[e]<-as.character(cut(min(tmt$rank[sa]),breaks))
+					class$rank_Tomtom[e]<-min(tmt$rank[sa])
+				}
+			}
+			
+##KDMMatch
+            W<-kdmMotifsFromPWM(pwmSet=kdmLoadPWMSet(paste0(mdir,"pwm.meme")),kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand,pad.size=kmerlength-1 )
+            colnames(W)<-1:ncol(W)
+			kdmmatch<-kdmTom(W,h13_W,best.hit=FALSE,threshold=0.05,targetInfo=h13_tinfo,sort.by="similarity")
+ 			if(length(kdmmatch)>1){
+				kdmmatch<-kdmmatch[which( (kdmmatch$q.value * ncol(W)) < 0.05),]
+				if(nrow(kdmmatch)>0){
+					qq<-unique(kdmmatch$query)
+					kdmmatch$rank<-NA
+					for(q in 1:length(qq)){
+						ss<-which(kdmmatch$query == qq[q])
+						kdmmatch$rank[ss]<-1:length(ss)
+					}
+					sa<-which(kdmmatch$target==METADATA$target[e])
+					if(length(sa)>0){
+						class$cat_KDMMatch[e]<-as.character(cut(min(kdmmatch$rank[sa]),breaks))
+						class$rank_KDMMatch[e]<-min(kdmmatch$rank[sa])
+					}
+				}
+			}
+			
+		}else{
+			class$cat_Tomtom[e]<-"No central motifs"
+			class$cat_KDMMatch[e]<-"No central motifs"
+		}
+	
+	}else{
+		class$cat_Tomtom[e]<-"Target not in reference"
+        class$cat_KDMMatch[e]<-"Target not in reference"
+	}
+	
+	print(class[e,])
+}
+# save(file=paste0(OUTPUT_dir,"classification_KDMMatch_Tomtom.Rdata"),class)
+
+

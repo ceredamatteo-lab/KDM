@@ -1,0 +1,63 @@
+R 
+library(rkdMotifs)
+library(ROCR)
+
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+
+library(SeqGL)
+dictionary.file<-"DATA/RDATA/wildcard_dict_kmer8_mismatches2_alpha5_consecutive_mis.Rdata"
+
+
+build.train.test.data.from.kdm<-function(DATA, dictionary.file,select.top.features = TRUE){
+  train.labels <- DATA$trainLabels
+  train.labels[which(train.labels==0)]<--1
+  test.labels <- DATA$testLabels
+  test.labels[which(test.labels==0)]<--1
+  show("Building features from dictionary...")
+  features <- build.features.kernels(dictionary.file, c(DATA$train.seqs,DATA$test.seqs), NULL, FALSE)$features
+  train.features <- features[1:length(DATA$train.seqs), ]
+  test.features <- features[(length(DATA$train.seqs) + 1):nrow(features),]
+  feature.inds <- NULL
+  if (select.top.features) {
+    show("Selecting top features...")
+    feature.inds <- SeqGL::select.top.features(train.features, train.labels)
+    train.features <- train.features[, feature.inds]
+    test.features <- test.features[, feature.inds]
+  }
+  show("Package and return...")
+  results <- list(train.features = train.features, test.features = test.features, train.labels = train.labels, test.labels = test.labels)
+  return(results)
+}
+build.seqGL<-function(DATA,dictionary.file){
+ 	train.test.data<-build.train.test.data.from.kdm(DATA,dictionary.file)
+}
+do.seqGL<-function(train.test.data){
+	clustering.results <- run.clustering (train.test.data$train.features,no.cores=20)
+	lambdas=c(1e-2, 5e-3, 1e-3, 5e-4, 1e-4)
+	param.eval <- group.lasso.eval.parameters (train.test.data$train.features, train.test.data$train.labels, train.test.data$test.features, train.test.data$test.labels, clustering.results$groups, lambdas=lambdas,no.cores=20)
+	inds <- which (param.eval$aucs.matrix == max (param.eval$aucs.matrix), arr.ind=TRUE)
+	group.lasso.results <- run.group.lasso (train.test.data$train.features, train.test.data$train.labels, train.test.data$test.features, train.test.data$test.labels, clustering.results$groups, param.eval$lambdas[inds[1]], param.eval$lambdas[inds[2]],no.cores=20)
+	group.lasso.results$test.preds
+}
+
+pred_SEQGL<-data.frame(ACC=rep(NA,length(DATASET)),AUROC=NA,AUPRC=NA)
+for(i in 1:nrow(einfo)){
+    DATA<-DATASET[[i]]
+    DATA$train.seqs<-DNAStringSet(kdmGetSequence(DATA$train,file.name=genome) )
+    DATA$test.seqs<-DNAStringSet(kdmGetSequence(DATA$test,file.name=genome) )
+
+    d1<-build.seqGL(DATA,dictionary.file)
+    p<-do.seqGL(d1)
+    
+    pred_SEQGL$ACC[i]<-max(performance(prediction(labels=DATA$testLabels,predictions=p),"acc")@y.values[[1]])
+    pred_SEQGL$AUROC[i]<-performance(prediction(labels=DATA$testLabels,predictions=p),"auc")@y.values[[1]]
+    pred_SEQGL$AUPRC[i]<-performance(prediction(labels=DATA$testLabels,predictions=p),"aucpr")@y.values[[1]]
+    print(pred_SEQGL[i,])
+}
+
+
+# save(file=paste0(OUTPUT_dir,"prediction_SEQGL_TF-ENCODE.Rdata"),pred_SEQGL)

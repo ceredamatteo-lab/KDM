@@ -1,0 +1,105 @@
+R 
+library(rkdMotifs)
+library(glmnet)
+library(cluster)
+library(ROCR)
+library(doMC)
+
+load("DATA/RDATA/METADATA_TF-benchmark.Rdata")
+load("DATA/RDATA/DATASET_TF-benchmark.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+kmerlength<-8
+ngaps<-2
+double.strand<-TRUE
+
+
+tol<-1e-6
+s<-"lambda.min"
+minrank<-100
+np<-0
+pred_KDM<-data.frame(ACC=rep(NA,nrow(METADATA)),AUROC=NA,AUPRC=NA)
+
+
+### BEGIN KDMFIND E KDM-LRLM nTrainPos <=5000
+
+sel<-which(METADATA$nTrainPos <=5000)
+for(i in 1:length(sel)){  
+    e<-sel[i] 
+    DATA<-DATASET[[e]] 
+    
+    CC_train<-kdmDistr(DATA$train$sequence,kmerlength,ngaps,double.strand)
+	W0<-kdmGetW0(CC_train,"complete",good.clusters=FALSE,min.rank=minrank,max.rank=ncol(CC_train),bhattacharyya=FALSE,use.float=FALSE)
+	setgMethodsSeed(0)
+	W<-kdmMotifs(CC_train,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+	
+	FF_train<-kdmFeatures(motifs=W,data=CC_train)
+	m<-cv.glmnet(y=DATA$train$label,x=FF_train,family="binomial",trace.it=TRUE,nlambda=20,type.measure="auc",alpha=1,foldid=DATA$train$ids,parallel=FALSE)
+    
+    CC_test<-kdmDistr(DATA$test$sequence,kmerlength,ngaps,double.strand) 
+    FF_test<-kdmFeatures(motifs=W,data=CC_test)
+
+    p<-predict(m,FF_test,type="link",s="lambda.min")
+    pred_KDM$ACC[e]<-max(performance(prediction(labels=DATA$test$label,predictions=p),"acc")@y.values[[1]])
+    pred_KDM$AUROC[e]<-performance(prediction(labels=DATA$test$label,predictions=p),"auc")@y.values[[1]]
+    pred_KDM$AUPRC[e]<-performance(prediction(labels=DATA$test$label,predictions=p),"aucpr")@y.values[[1]]	
+}
+
+
+### END   KDMFIND E KDM-LRLM nTrainPos <=5000
+
+### BEGIN KDMFIND E KDM-LRLM nTrainPos >=5000 & nTrainPos <=10000
+rank<-5000
+np<-500
+sel<-which(METADATA$nTrainPos >=5000 & pred_KDM$nTrainPos <=10000)
+for(e in 1:length(sel)){
+    e<-sel[i] 
+    DATA<-DATASET[[e]] 
+    
+    CC_train<-kdmDistr(DATA$train$sequence,kmerlength,ngaps,double.strand)
+    setgMethodsSeed(0)
+    W<-kdmMotifs(CC_train,rank,np,initialization="cluster",clustering.method="complete",tolerance=tol)
+ 
+    FF_train<-kdmFeatures(motifs=W,data=CC_train)
+    m<-cv.glmnet(y=DATA$train$label,x=FF_train,family="binomial",alpha=1,nlambda=20,foldid=DATA$train$ids,type.measure="auc",trace.it=TRUE,parallel=FALSE)
+    
+    CC_test<-kdmDistr(DATA$test$sequence,kmerlength,ngaps,double.strand)
+    FF_test<-kdmFeatures(motifs=W,data=CC_test)
+    p<-predict(m,FF_test,type="link",s="lambda.min")
+    pred_KDM$ACC[e]<-max(performance(prediction(labels=DATA$test$label,predictions=p),"acc")@y.values[[1]])
+    pred_KDM$AUROC[e]<-performance(prediction(labels=DATA$test$label,predictions=p),"auc")@y.values[[1]]
+    pred_KDM$AUPRC[e]<-performance(prediction(labels=DATA$test$label,predictions=p),"aucpr")@y.values[[1]]	   
+}
+
+### END   KDMFIND E KDM-LRLM nTrainPos >=5000 & nTrainPos <=10000
+
+### BEGIN KDMFIND E KDM-LRLM nTrainPos >20000
+rank<-10000
+np<-1000
+sel<-which(METADATA$nTrainPos >20000)
+max.seqs<-20000
+for(e in 1:length(sel)){
+    e<-sel[i] 
+    DATA<-DATASET[[e]] 
+    
+    setgMethodsSeed(0)
+    CC_train_red<-kdmDistr(DATA$train$sequence[1:max.seqs],k,g,TRUE)
+    W0<-kdmGetW0(CC_train_red,"complete",good.clusters=FALSE,min.rank=rank,max.rank=rank,bhattacharyya=FALSE,use.float=FALSE)
+    CC_train<-kdmDistr(DATA$train$sequence,k,g,TRUE)
+    W<-kdmMotifs(CC_train,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+
+    FF_train<-kdmFeatures(motifs=W,data=CC_train)
+    m<-cv.glmnet(y=DATASET[[e]]$train$label,x=FF_train,family="binomial",alpha=1,nlambda=20,foldid=DATASET[[e]]$train$ids,type.measure="auc",trace.it=TRUE,parallel=FALSE)
+
+    CC_test<-kdmDistr(DATASET[[e]]$test$sequence,k,g,TRUE) 
+    FF_test<-kdmFeatures(motifs=W,data=CC_test)
+    p<-predict(m,FF_test,type="link",s="lambda.min")
+    pred_KDM$AUROC[e]<-performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"auc")@y.values[[1]]
+    pred_KDM$ACC[e]<-max(performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"acc")@y.values[[1]])
+    pred_KDM$AUPRC[e]<-performance(prediction(labels=DATASET[[e]]$test$label,predictions=p),"aucpr")@y.values[[1]]	
+}
+
+### END   KDMFIND E KDM-LRLM nTrainPos >20000
+
+# save(file=paste0(OUTPUT_dir,"prediction_KDM_TF-benchmark.Rdata"),pred_KDM)

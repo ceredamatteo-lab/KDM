@@ -1,0 +1,45 @@
+R 
+library(ROCR)
+load("DATA/RDATA/METADATA_TF-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_TF-ENCODE.Rdata")
+genome<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+OUTPUT_dir<-"DATA/RESULTS/"
+
+do.lsgkm<-function(DATA,mode=2,prefix="/tmp/",hg=""){
+	pin<-which(DATA$trainLabels==1)
+	nin<-which(DATA$trainLabels==0)
+	
+	train.pos.name<-paste(prefix,".train.pos.fa",sep="")
+	train.neg.name<-paste(prefix,".train.neg.fa",sep="")
+	test.name<-paste(prefix,".test.fa",sep="")
+	model.name<-paste(prefix,".model.txt",sep="")
+	out.name<-paste(prefix,".test.txt",sep="")
+	
+	TRS<-kdmGetSequence(DATA$train,file.name=hg)	
+	cat(file=train.pos.name,paste(">",1:length(pin),"\n",TRS[pin],sep=""),sep="\n")
+	cat(file=train.neg.name,paste(">",1:length(nin),"\n",TRS[nin],sep=""),sep="\n")
+	
+	TES<-kdmGetSequence(DATA$test,file.name=hg)
+	cat(file=test.name,paste(">",1:length(TES),"\n",TES,sep=""),sep="\n")
+	
+	system(paste("gkmtrain -v 0 -T 16 -l 10 -k 6 -t",mode,train.pos.name,train.neg.name,prefix,sep=" "))
+	system(paste("gkmpredict -v 0 -T 16",test.name,model.name,out.name,sep=" "))
+	RR<-read.delim(out.name,header=F)
+	
+    list(ACC=max(performance(prediction(labels=DATA$testLabels,predictions=RR$V2),"acc")@y.values[[1]]),AUROC=performance(prediction(labels=DATA$testLabels,predictions=RR$V2),"auc")@y.values[[1]],AUPRC=performance(prediction(labels=DATA$testLabels,predictions=RR$V2),"aucpr")@y.values[[1]])
+}
+
+pred_gkm<-data.frame(AUROC=NA,ACC=NA,AUPRC=NA,stringsAsFactors=FALSE)
+for(i in 1:nrow(METADATA)){
+    
+    p<-do.lsgkm(DATASET[[i]],mode=2,prefix="/tmp/ds300",hg=genome)
+    
+    pred_gkm$AUROC[i]<-p$AUROC
+    pred_gkm$ACC[i]<-p$ACC
+    pred_gkm$AUPRC[i]<-p$AUPRC
+
+    print(pred_gkm[i,])
+}
+
+# save(file=paste0(OUTPUT_dir,"prediction_GKM_TF-ENCODE.Rdata"),pred_GKM)
