@@ -1,5 +1,5 @@
 library(rkdMotifs)
-library(stringr)
+#library(stringr)
 library(glmnet)
 library(ROCR)
 
