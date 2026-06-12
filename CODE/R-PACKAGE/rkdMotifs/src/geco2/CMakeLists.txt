@@ -29,7 +29,7 @@ option(GECO_ENABLE_CUDA "Use CUDA GPU acceleration if available" ON)
 if(EXISTS "/usr/lib/rpm/redhat/redhat-hardened-ld")
     message(STATUS "geco2: hardened linker detected → enabling PIE/PIC flags for CUDA")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fPIE")
-endif()
+ endif()
 
 # ── CUDA detection ────────────────────────────────────────────────────────────
 set(GECO_HAS_CUDA OFF)
@@ -74,10 +74,11 @@ if(GECO_ENABLE_CUDA)
     if(CMAKE_CUDA_COMPILER)
         enable_language(CUDA)
         find_package(CUDAToolkit REQUIRED)
+        
 
         set(GECO_HAS_CUDA ON)
-        set(CMAKE_CUDA_STANDARD 17)
-        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+        # set(CMAKE_CUDA_STANDARD 17)
+        # set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
         message(STATUS "geco2: CUDA found")
         message(STATUS "       compiler  : ${CMAKE_CUDA_COMPILER}")
@@ -233,6 +234,10 @@ target_include_directories(geco2
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+target_compile_options(geco2 PRIVATE
+    -U_GLIBCXX_ASSERTIONS
+)
+
 set_target_properties(geco2 PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     # Do NOT set VERSION / SOVERSION here.
@@ -246,6 +251,7 @@ set_target_properties(geco2 PROPERTIES
 
 # ── CUDA target settings ──────────────────────────────────────────────────────
 if(GECO_HAS_CUDA)
+
     target_compile_definitions(geco2 PUBLIC GECO_HAS_CUDA)
 
     set_target_properties(geco2 PROPERTIES
@@ -258,6 +264,10 @@ if(GECO_HAS_CUDA)
         message(STATUS "geco2: CUDA_ARCHITECTURES not set — using default 75;80;86")
     endif()
 
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)    
+    
+   
     # Per-target PIC fix for hardened systems (companion to the global fPIE above)
     # -fPIC is correct for shared libraries; -fPIE is only for executables.
     if(EXISTS "/usr/lib/rpm/redhat/redhat-hardened-ld")

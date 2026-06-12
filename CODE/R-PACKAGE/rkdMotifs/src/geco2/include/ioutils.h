@@ -1,7 +1,8 @@
 #pragma once
 #include "csv_iterator.hpp"
 
-#include <array.h>
+#include "array.h"
+
 #include <map>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/any.hpp>

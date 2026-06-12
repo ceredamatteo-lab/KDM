@@ -78,12 +78,14 @@ template<typename  T>
 gCudaCounter<T>::gCudaCounter(const gLmerEstimator<T> & counter):i_counter(counter),i_masks(counter.i_masks),i_mmcoeffs(counter.i_mmcoeffs),i_mlmerGkmer(counter.i_mlmerGkmer),i_lmerDSLmer(counter.i_lmerDSLmer){
 }
 
+template class thrust::device_vector<float>;
+template class thrust::device_vector<double>;
 
 template<typename T>
 bool gCudaCounter<T>::estimatelmers(const std::map<size_t,std::list<unsigned char> > & nseq, std::vector<T> & elmers,indexType base,bool doubleStrand,bool strict) const{
     //vector<list<unsigned char> > nseq = i_counter.seqCode(seq,0,strict);
     bool nnzero=false;
-    thrust::device_vector<T> dev_elmers(i_counter.i_nlmers,0.0);
+    thrust::device_vector<T> dev_elmers(i_counter.i_nlmers,T(0));
     indexType i_mask=pow(4,i_counter.i_l)-1;
     
     for(auto u=nseq.begin();u!=nseq.end();u++){

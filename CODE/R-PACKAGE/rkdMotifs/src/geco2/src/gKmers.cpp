@@ -86,18 +86,21 @@ vector<unsigned char > seqCode(const string & sequence){
 map<size_t,list<unsigned char>>  seqCode(const std::string  & seq,indexType sID,bool strict){
     
     vector<unsigned char> tres=seqCode(seq);
-    size_t sl=seq.length();    
+    // size_t sl=seq.length();    
+    size_t sl=tres.size();    
     map<size_t,list<unsigned char>> res;
     size_t pos=0;
 
     while(pos<sl){
-        while(tres[pos]==4 && pos<sl){
+        while(pos<sl && tres[pos]==4){
             pos++;
         }
         auto plist=res.insert(make_pair(pos,list<unsigned char>()));
-        while(tres[pos]!=4 && pos < sl){
-            (*plist.first).second.push_back(tres[pos]);
-            pos++;
+        while(pos < sl){
+            if(tres[pos]!=4){
+                (*plist.first).second.push_back(tres[pos]);
+                pos++;
+            }
         }
     }
     if(res.size()>1){
@@ -1798,7 +1801,7 @@ geco::methods::gMDense<T> gLmerEstimator<T>::countDense(const std::vector<string
     const gCudaCounter<T> & ccounter = *((gCudaCounter<T> *) i_cudaObject);
     if(useCuda()){
         gMThreadException te;
-#pragma omp parallel for
+//#pragma omp parallel for
         for(indexType s=0;s<sequences.size();s++){
             if(te.exceptionOccurred()) continue;
             try{

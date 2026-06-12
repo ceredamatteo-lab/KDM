@@ -40,6 +40,7 @@ geco::methods::cuda::cudaDense<T> & geco::methods::cuda::isGreater(const cuda::c
     thrust::device_ptr<T> Cp=thrust::device_pointer_cast<T>(C.i_values);
     thrust::transform(Ap,Ap+nelm,Bp,Bp,igfunctor<T>(nrep));
     thrust::transform(Cp,Cp+nelm,Bp,Cp,thrust::plus<T>());
+    //thrust::transform(Cp,Cp+nelm,Bp,Cp,cuda::std::plus<T>);
     return C;
 }
 

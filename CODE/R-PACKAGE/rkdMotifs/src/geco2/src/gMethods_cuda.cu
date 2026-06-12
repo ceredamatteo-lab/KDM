@@ -11,6 +11,9 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/functional.h>
 
+//to solve incompatibility with cuda 13.3
+#include<iterator>
+
 
 
 #include<list>
@@ -115,14 +118,17 @@ std::vector<geco::methods::cuda::cudaIndexType> geco::methods::cuda::find(const 
     if(greater){
         auto i=thrust::find_if(Ap,Ap+A.i_nrows*A.i_ncols,gt<T>(threshold));
         while(i!=Ap+A.i_nrows*A.i_ncols){
-            rr.push_back(thrust::distance(Ap,i));
+            //removed to solve incompatibility with cuda 13.3
+            //rr.push_back(thrust::distance(Ap,i));
+            rr.push_back(std::distance(Ap,i));
             i=thrust::find_if(i+1,Ap+A.i_nrows*A.i_ncols,gt<T>(threshold));
         }
     }else{
         auto i=thrust::find_if(Ap,Ap+A.i_nrows*A.i_ncols,lt<T>(threshold));
         while(i!=Ap+A.i_nrows*A.i_ncols){
-            
-            rr.push_back(thrust::distance(Ap,i));
+            //removed to solve incompatibility with cuda 13.3
+            //rr.push_back(thrust::distance(Ap,i));
+            rr.push_back(std::distance(Ap,i));
             i=thrust::find_if(i+1,Ap+A.i_nrows*A.i_ncols,lt<T>(threshold));
         }
     }
