@@ -15,6 +15,7 @@ The package has the following dependencies:
 	OpenBLAS		(Required)
 	NLopt			(Required)
 	OpenMP			(Required)
+	BOOST			(Required)
 
 
 ## Package installation
@@ -28,6 +29,8 @@ Then you install the package with:
 
 	R CMD INSTALL rkdMotifs_1.0.tar.gz
 	
-If CUDA is not installed on you system you can disable it by installing the package with the following:
+If CUDA is not installed on you system a version of the package without CUDA support will be installed
+
+If you have CUDA and the package doesn't compile properly or if you don't need CUDA support install the package with:
 
 	R CMD INSTALL --configure-args="--without-cuda" rkdMotifs_1.0.tar.gz
