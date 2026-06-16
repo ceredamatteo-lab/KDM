@@ -215,14 +215,14 @@ for(u in 1:length(selexp)){
   }
   
 }
-save(file="DATA/RDATA/kdmmap_vs_centrimo.Rdata",jaccard,selcen)
+save(file="DATA/RESULTS/kdmmap_vs_centrimo.Rdata",jaccard,selcen)
 
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(irr)
 
-load("DATA/RDATA/kdmmap_vs_centrimo.Rdata")
+load("DATA/RESULTS/kdmmap_vs_centrimo.Rdata")
 breaks=c(0,5,10000,Inf)
 labels=c("1-5",">5","Not selected")
 i=4

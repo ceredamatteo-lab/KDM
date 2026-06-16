@@ -1,0 +1,104 @@
+library(rkdMotifs)
+library(glmnet)
+library(ROCR)
+
+kmerlength<-6
+ngaps<-2
+double.strand<-FALSE
+np<-0
+goodclusters<-FALSE
+minrank<-70
+maxrank<-70
+tol<-1e-6
+parallel<-FALSE
+s<-"lambda.min"
+r=100
+
+load("DATA/RDATA/DATASET_RBP-ENCODE.Rdata")
+load("DATA/RDATA/METADATA_RBP-ENCODE.Rdata")
+genome_file<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+
+# 1. Calculating KDM Models ----
+for(i in 1:nrow(exp_info)){
+    print(i)
+    exp=exp_info$Experiment[i]
+    DATA<-DATASET[[which(names(DATASET)==exp)]]
+    minrank<-r
+    maxrank<-r
+
+    # TRAIN
+    seqs<-kdmGetSequence(DATA$train,file.name=genome_file)
+    set.seed(0)
+    if(length(seqs)<r){
+        CC<-kdmDistr(data=seqs,kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+        W0<-kdmGetW0(CC,"complete",good.clusters=goodclusters,min.rank=10,max.rank=maxrank,bhattacharyya=FALSE,use.float=FALSE)
+        W<-kdmMotifs(CC,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+     
+    } else{
+        CC<-kdmDistr(data=seqs,kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+        W0<-kdmGetW0(CC,"complete",good.clusters=goodclusters,min.rank=minrank,max.rank=maxrank,bhattacharyya=FALSE,use.float=FALSE)
+        W<-kdmMotifs(CC,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+    }
+    saveRDS(W,paste0("DATA/RESULTS/KDM_RBP_W/",exp,"_train.rds"))
+
+    # TEST
+    seqs<-kdmGetSequence(DATA$test,file.name=genome_file)
+    set.seed(0)
+    if(length(seqs)<r){
+        CC<-kdmDistr(data=seqs,kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+        W0<-kdmGetW0(CC,"complete",good.clusters=goodclusters,min.rank=10,max.rank=maxrank,bhattacharyya=FALSE,use.float=FALSE)
+        W<-kdmMotifs(CC,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+     
+    } else{
+        CC<-kdmDistr(data=seqs,kmerlength=kmerlength,ngaps=ngaps,double.strand=double.strand)        
+        W0<-kdmGetW0(CC,"complete",good.clusters=goodclusters,min.rank=minrank,max.rank=maxrank,bhattacharyya=FALSE,use.float=FALSE)
+        W<-kdmMotifs(CC,ncol(W0$W0),np,initialization="custom",W0=W0$W0,tolerance=tol)
+    }
+    saveRDS(W,paste0("DATA/RESULTS/KDM_RBP_W/",exp,"_test.rds"))
+}
+
+# 2. GLM and performances ----
+
+kdm_list = lapply(seq_len(nrow(exp_info)), function(i){
+    print(i)
+
+    exp = exp_info$Experiment[i]
+    DATA = DATASET[[which(names(DATASET) == exp)]]
+    minrank = r; maxrank = r
+
+    seqs = kdmGetSequence(DATA$train, file.name = genome_file)
+    set.seed(0)
+
+    W = as(readRDS(paste0("DATA/RESULTS/KDM_RBP_W/", exp, "_train.rds")), "kdmotifs")
+
+    C1 = kdmDistr(substr(seqs,1,31), kmerlength=kmerlength, ngaps=ngaps, double.strand=double.strand)
+    C2 = kdmDistr(substr(seqs,41,71), kmerlength=kmerlength, ngaps=ngaps, double.strand=double.strand)
+    C3 = kdmDistr(substr(seqs,21,51), kmerlength=kmerlensgth, ngaps=ngaps, double.strand=double.strand)
+
+    F1 = kdmFeatures(W, C1); F2 = kdmFeatures(W, C2); F3 = kdmFeatures(W, C3)
+
+    mm = cv.glmnet(y=DATA$trainLabels, x=cbind(F1,F2,F3), family="binomial", type.measure="auc", foldid=DATA$ids, parallel=parallel, alpha=1)
+
+    seqs = kdmGetSequence(DATA$test, file.name=genome_file)
+
+    C1 = kdmDistr(substr(seqs,1,31), kmerlength=kmerlength, ngaps=ngaps, double.strand=double.strand)
+    C2 = kdmDistr(substr(seqs,41,71), kmerlength=kmerlength, ngaps=ngaps, double.strand=double.strand)
+    C3 = kdmDistr(substr(seqs,21,51), kmerlength=kmerlength, ngaps=ngaps, double.strand=double.strand)
+
+    F1 = kdmFeatures(W, C1); F2 = kdmFeatures(W, C2); F3 = kdmFeatures(W, C3)
+
+    res=prediction(labels=DATA$testLabels,predictions=predict(mm,cbind(F1,F2,F3),type="link",s=s))
+
+    auc = performance(res,"auc")@y.values[[1]]
+    acc = max(performance(res,"acc")@y.values[[1]])
+    auprc = performance(res,"aucpr")@y.values[[1]]
+
+    data.frame(Experiment=exp, ACC=acc, AUROC=auc, AUPRC=auprc)
+
+})
+
+kdm = do.call(rbind, kdm_list)
+kdm$Experiment=NULL
+save(kdm,"DATA/RESULTS/RBP_ENCODE/kdm.Rdata")
+
