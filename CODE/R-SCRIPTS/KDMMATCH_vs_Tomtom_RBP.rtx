@@ -1,0 +1,63 @@
+library(rkdMotifs)
+library(dplyr)
+library(reshape2)
+library(universalmotif)
+
+load("DATA/RDATA/mCrossBase.Rdata")
+
+
+## TOMTOM ##
+load("DATA/RDATA/METADATA_RBP_CISBP_ATTRACT.Rdata")
+mcrossfile<-"DATA/SUPPORT_FILES/mCrossBase.meme"
+queryfile="DATA/SUPPORT_FILES/CISBP_ATtRACT.meme"
+cmd_tomtom<-paste("tomtom -oc DATA/SUPPORT_FILES/tomtom/"," -xalph -thresh 0.05 -norc ",queryfile," ",mcrossfile,sep="")
+rr<-system(cmd_tomtom,intern=TRUE,ignore.stderr=TRUE)
+
+tom<-read.delim("DATA/SUPPORT_FILES/tomtom/tomtom.tsv",comment.char="#")	
+tom$target2<-mcross_info$target[match(tom$Target_ID,mcross_info$name)]
+tom$query2<-pwms_info$RBP_Name[match(tom$Query_ID,pwms_info$Motif_ID)]
+tom$rank<-NA
+
+classification<-data.frame(target=unique(pwms_info$RBP_Name),Tomtom="No match")
+for(u in 1:nrow(classification)){
+	rbp=classification$target[u]
+	if(!rbp %in% tom$query2){next}
+	
+	sel=subset(tom,query2==rbp)
+	un<-unique(sel$Query_ID)
+	for(i in 1:length(un)){
+		ss<-which(sel$Query_ID==un[i])
+		sel$rank[ss]<-1:length(ss)
+		}
+	ss<-subset(sel,target2==query2)
+	if(nrow(ss)==0){next}
+	classification$Tomtom[u]<-as.character(cut(min(ss$rank),c(0,1,3,10,Inf)))
+}
+	
+## KDMTOM ##
+pwm<-kdmLoadPWMSet(queryfile)
+kdm_pwm<-kdmMotifsFromPWM(pwm,6,2,FALSE,5)						
+colnames(kdm_pwm)<-gsub(" ","",names(pwm))
+
+tom<-kdmTom(kdm_pwm,mcross_W,best.hit=FALSE,threshold=0.05,targetInfo=mcross_tinfo)
+#saveRDS(tom,"DATA/RDATA/kdmtom_result.rds")
+#tom=readRDS("DATA/RDATA/kdmtom_result.rds")
+tom$target2<-mcross_info$target[match(tom$target,mcross_info$name)]
+tom$query2<-pwms_info$RBP_Name[match(tom$query,pwms_info$Motif_ID)]
+classification$Kdmtom="No match"
+for(u in 1:nrow(classification)){
+	rbp=classification$target[u]
+	if(!rbp %in% tom$query2){next}
+	
+	sel=subset(tom,query2==rbp)
+	un<-unique(sel$query)
+	for(i in 1:length(un)){
+		ss<-which(sel$query==un[i])
+		sel$rank[ss]<-1:length(ss)
+		}
+	ss<-subset(sel,target2==query2)
+	if(nrow(ss)==0){next}
+	classification$Kdmtom[u]<-as.character(cut(min(ss$rank),c(0,1,3,10,Inf)))
+}
+	
+saveRDS(classification,"DATA/RESULTS/Classification_comparison.rds")
