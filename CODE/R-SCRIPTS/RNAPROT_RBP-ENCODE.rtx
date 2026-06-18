@@ -1,0 +1,104 @@
+library(rkdMotifs)
+load("DATA/RDATA/METADATA_RBP-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_RBP-ENCODE.Rdata")
+genome_file<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+prefix="/tmp/rnaprot/"
+f_neg=paste0(prefix,"NEG/")
+f_pos=paste0(prefix,"POS/")
+f_test=paste0(prefix,"TEST/")
+f_pred=paste0("DATA/RESULTS/Rnaprot/")
+system(paste0("mkdir ",f_neg))
+system(paste0("mkdir ",f_pos))
+system(paste0("mkdir ",f_test))
+system(paste0("mkdir ",f_pred))
+
+
+# INPUT FASTA
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+    DATA<-DATASET[[which(names(DATASET)==exp)]]
+    
+    bed=DATA$train
+    seqs<-kdmGetSequence(bed,file.name=genome_file)
+
+    posx=which(DATA$trainLabels==1)
+    for(j in 1:length(posx)){
+    write(paste0(">pos",j),paste0(f_pos,exp,".fasta"),append=T)
+    write(seqs[posx[j]],paste0(f_pos,exp,".fasta"),append=T)
+    }
+
+    negx=which(DATA$trainLabels==0)
+    for(j in 1:length(negx)){
+    write(paste0(">neg",j),paste0(f_neg,exp,".fasta"),append=T)
+    write(seqs[negx[j]],paste0(f_neg,exp,".fasta"),append=T)
+    }
+
+    bed=DATA$test
+    seqs<-kdmGetSequence(bed,file.name=genome_file)
+    for(j in 1:length(seqs)){
+    write(paste0(">seq",j),paste0(f_test,exp,".fasta"),append=T)
+    write(seqs[j],paste0(f_test,exp,".fasta"),append=T)
+    }
+}
+
+
+setwd(prefix)
+
+# RNAPROT PREPARE
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+	cmd=paste0("rnaprot gt --in ",f_pos,exp,".fasta --neg-in ",f_neg,exp,".fasta --out ",exp,"_gt_out --report")
+	system(cmd)
+}
+
+# RNAPROT MODELS
+for(i in 1:nrow(exp_info)){
+  exp=exp_info$Experiment[i]
+  cmd=paste0("rnaprot train --in ",exp,"_gt_out --out ",exp,"_train_out --verbose-train")
+  system(cmd)
+}
+
+# RNAPROT PREPARE TEST
+for(i in 1:nrow(exp_info)){
+  exp=exp_info$Experiment[i]
+  cmd=paste0("rnaprot gp --in ",f_test,exp,".fasta --train-in ",exp,"_train_out --out ",exp,"_gp_out --report")
+  system(cmd)
+}
+
+# RNAPROT TEST
+for(i in 1:nrow(exp_info)){
+  exp=exp_info$Experiment[i]
+  cmd=paste0("rnaprot predict --in ",exp,"_gp_out --train-in ",exp,"_train_out --out ",f_pred,exp,"_predict_out --mode 1")
+  system(cmd)
+}
+
+
+# RNAPROT PERFORMANCES
+library(ROCR)
+setwd("/home/KDM/") # KDM repository
+
+rnaprot_list <- lapply(seq_len(nrow(exp_info)), function(i){
+
+  code = exp_info$Experiment[i]
+  if(exp_info$nTrainPeaks[i] <= 100){return(data.frame(Experiment = code,ACC = NA,AUROC = NA,AUPRC = NA))}
+  pred = read.delim(paste0(f_pred,code,"_predict_out/whole_site_scores.tsv"))
+  pred$ID = as.numeric(gsub("seq", "", pred$site_id))
+  pred= pred[order(pred$ID), ]
+
+  if(nrow(pred) == exp_info$nTestPeaks[i] * 2){labels = c(rep(1, exp_info$nTestPeaks[i]),rep(0, exp_info$nTestPeaks[i]))
+    } else {labels <- ifelse(pred$ID <= exp_info$nTestPeaks[i],1,0)}
+
+  res = prediction(labels = labels,predictions = pred$site_score)
+
+  auc   = performance(res, "auc")@y.values[[1]]
+  acc   = max(performance(res, "acc")@y.values[[1]])
+  auprc = performance(res, "aucpr")@y.values[[1]]
+
+  data.frame(Experiment = code,ACC = acc,AUROC = auc,AUPRC = auprc)
+})
+
+rnaprot <- do.call(rbind, rnaprot_list)
+
+rnaprot$Experiment=NULL
+save(rnaprot,"DATA/RESULTS/prediction_RNAPROT_RBP-ENCODE.Rdata")
