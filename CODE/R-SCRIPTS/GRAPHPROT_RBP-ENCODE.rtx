@@ -1,0 +1,92 @@
+library(rkdMotifs)
+load("DATA/RDATA/METADATA_RBP-ENCODE.Rdata")
+load("DATA/RDATA/DATASET_RBP-ENCODE.Rdata")
+genome_file<-"DATA/SUPPORT_FILES/hg38.2bit"
+
+prefix="/tmp/graphprot/"
+f_models=paste0(prefix,"MODELS/")
+f_neg=paste0(prefix,"NEG/")
+f_pos=paste0(prefix,"POS/")
+f_test=paste0(prefix,"TEST/")
+f_pred=paste0("DATA/RESULTS/Graphprot/")
+system(paste0("mkdir ",f_models))
+system(paste0("mkdir ",f_neg))
+system(paste0("mkdir ",f_pos))
+system(paste0("mkdir ",f_test))
+system(paste0("mkdir ",f_pred))
+
+
+# INPUT FASTA
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+    DATA<-DATASET[[which(names(DATASET)==exp)]]
+    
+    bed=DATA$train
+    bed$start=bed$start-150
+    bed$end=bed$end+150
+    seqs<-kdmGetSequence(bed,file.name=genome_file)
+    seqs_new <- unname(sapply(seqs, function(x) {
+    paste0(tolower(substr(x, 1, 150)),substr(x, 151, 221),tolower(substr(x, 222, 371)))
+    }))
+
+    posx=which(DATA$trainLabels==1)
+    for(j in 1:length(posx)){
+    write(paste0(">pos",j),paste0(f_pos,exp,".fasta"),append=T)
+    write(seqs_new[posx[j]],paste0(f_pos,exp,".fasta"),append=T)
+    }
+
+    negx=which(DATA$trainLabels==0)
+    for(j in 1:length(negx)){
+    write(paste0(">neg",j),paste0(f_neg,exp,".fasta"),append=T)
+    write(seqs_new[negx[j]],paste0(f_neg,exp,".fasta"),append=T)
+    }
+
+    bed=DATA$test
+    bed$start=bed$start-150
+    bed$end=bed$end+150
+    seqs<-kdmGetSequence(bed,file.name=genome_file)
+    seqs_new <- unname(sapply(seqs, function(x) {
+    paste0(tolower(substr(x, 1, 150)),substr(x, 151, 221),tolower(substr(x, 222, 371)))
+    }))
+    for(j in 1:length(seqs_new)){
+    write(paste0(">seq",j),paste0(f_test,exp,".fasta"),append=T)
+    write(seqs_new[j],paste0(f_test,exp,".fasta"),append=T)
+    }
+}
+
+# GRAPHPROT MODELS
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+	cmd=paste0("GraphProt.pl --action train --fasta ",f_pos,exp,".fasta --negfasta ",f_neg,exp,".fasta --prefix ",f_models,exp)
+	system(cmd)
+}
+
+# GRAPHPROT PREDICTIONS
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+	cmd=paste0("GraphProt.pl --action predict --fasta ",f_test,exp,".fasta --model ",f_models,exp,".model --prefix ",f_pred,exp)
+	system(cmd)
+}
+
+# GRAPHPROT PERFORMANCES
+library(ROCR)
+
+graphprot_list <- lapply(seq_len(nrow(exp_info)), function(i){
+
+  code = exp_info$Experiment[i]
+  pred = read.delim(paste0(f_pred,code,".predictions"),header=F)
+  labels = c(rep(1, exp_info$nTestPeaks[i]),rep(0, exp_info$nTestPeaks[i]))
+
+  res = prediction(labels = labels,predictions = pred$V3)
+
+  auc   = performance(res, "auc")@y.values[[1]]
+  acc   = max(performance(res, "acc")@y.values[[1]])
+  auprc = performance(res, "aucpr")@y.values[[1]]
+
+  data.frame(Experiment = code,ACC = acc,AUROC = auc,AUPRC = auprc)
+})
+
+graphprot <- do.call(rbind, graphprot_list)
+
+graphprot$Experiment=NULL
+save(graphprot,"DATA/RESULTS/prediction_GRAPHPROT_RBP-ENCODE.Rdata")
