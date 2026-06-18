@@ -1,0 +1,85 @@
+prefix="/tmp/graphprot_benchmark/"
+f_models=paste0(prefix,"MODELS/")
+f_neg=paste0(prefix,"NEG/")
+f_pos=paste0(prefix,"POS/")
+f_test=paste0(prefix,"TEST/")
+f_pred=paste0("DATA/RESULTS/Graphprot_BENCHMARK/")
+system(paste0("mkdir ",f_models))
+system(paste0("mkdir ",f_neg))
+system(paste0("mkdir ",f_pos))
+system(paste0("mkdir ",f_test))
+system(paste0("mkdir ",f_pred))
+experiment=do.call(rbind,strsplit(list.files("DATA/SUPPORT_FILES/RBP_BENCHMARK/",pattern="positives.fa"),"\\."))[,1]
+
+# INPUT FASTA
+for(i in 1:length(experiment)){
+    print(i)
+    exp=experiment[i]
+    
+    pos_seq<-scan(paste0("DATA/SUPPORT_FILES/RBP_BENCHMARK/",exp,".positives.fa"),what="char")
+    pos_ids=gsub(">","",pos_seq[seq(1,length(pos_seq)-1,2)])
+    pos_seq=pos_seq[seq(2,length(pos_seq),2)]
+    pos_seq=gsub("U", "T", pos_seq)    
+
+    neg_seq<-scan(paste0("DATA/SUPPORT_FILES/RBP_BENCHMARK//",exp,".negatives.fa"),what="char")
+    neg_ids=gsub(">","",neg_seq[seq(1,length(neg_seq)-1,2)])
+    neg_seq=neg_seq[seq(2,length(neg_seq),2)]
+    neg_seq=gsub("U", "T", neg_seq)
+
+    test<-scan(paste0("DATA/SUPPORT_FILES/RBP_BENCHMARK/",exp,".test_ids"),what="char")
+    test_pos_x=which(pos_ids %in% test)
+    test_neg_x=which(neg_ids %in% test)
+
+    pos_train=pos_seq[-test_pos_x]
+    neg_train=neg_seq[-test_neg_x]
+
+    for(j in 1:length(pos_train)){
+    write(paste0(">pos",j),paste0(f_pos,exp,".fa"),append=T)
+    write(pos_train[j],paste0(f_pos,exp,".fasta"),append=T)
+    }
+
+    for(j in 1:length(neg_train)){
+    write(paste0(">neg",j),paste0(f_neg,exp,".fa"),append=T)
+    write(neg_train[j],paste0(f_neg,exp,".fasta"),append=T)
+    }
+
+    pos_test=pos_seq[test_pos_x]
+    neg_test=neg_seq[test_neg_x]
+    test_seq=c(pos_test,neg_test)
+    
+    for(j in 1:length(test_seq)){
+    write(paste0(">test",j),paste0(f_test,exp,".fa"),append=T)
+    write(test_seq[j],paste0(f_test,exp,".fasta"),append=T)
+    }
+}
+
+# GRAPHPROT MODELS
+for(i in 1:nrow(exp_info)){
+	exp=experiment[i]
+	cmd=paste0("GraphProt.pl --action train --fasta ",f_pos,exp,".fa --negfasta ",f_neg,exp,".fa --prefix ",f_models,exp)
+	system(cmd)
+}
+
+# GRAPHPROT PREDICTIONS
+for(i in 1:nrow(exp_info)){
+	exp=exp_info$Experiment[i]
+	cmd=paste0("GraphProt.pl --action predict --fasta ",f_test,exp,".fa --model ",f_models,exp,".model --prefix ",f_pred,exp)
+	system(cmd)
+}
+
+# GRAPHPROT PERFORMANCES
+library(ROCR)
+result=data.frame(experiment=experiment,AUROC=NA)
+for(i in 1:nrow(result)){
+    exp=result$experiment[i]
+    test<-scan(paste0("DATA/SUPPORT_FILES/RBP_BENCHMARK/",exp,".test_ids"),what="char")
+    pos=sum(grepl("pos",test))
+    neg=sum(grepl("neg",test))
+
+    pred=read.table(paste0(f_pred,exp,".predictions"))
+    auc=performance(prediction(labels=c(rep(1,pos),rep(0,neg)),predictions=pred[,3]),"auc")@y.values[[1]]
+    result$AUROC[i]=auc
+}
+
+graphprot=result
+save(graphprot,"DATA/RESULTS/prediction_GRAPHPROT_RBP-BENCHMARK.Rdata")
