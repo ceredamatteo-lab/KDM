@@ -100,5 +100,5 @@ kdm_list = lapply(seq_len(nrow(exp_info)), function(i){
 
 kdm = do.call(rbind, kdm_list)
 kdm$Experiment=NULL
-save(kdm,"DATA/RESULTS/RBP_ENCODE/kdm.Rdata")
+save(kdm,"DATA/RESULTS/prediction_KDM_RBP-ENCODE.Rdata")
 
