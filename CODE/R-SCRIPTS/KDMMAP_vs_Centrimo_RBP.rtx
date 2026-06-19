@@ -107,7 +107,7 @@ bdir<-"/tmp/tempresRBP/"
 if (!dir.exists(bdir)) {dir.create(bdir, recursive = TRUE)}
 genomeFile<-"DATA/SUPPORT_FILES/hg38.2bit"
 load("DATA/RDATA/DATASET_RBP-ENCODE.Rdata")
-load("DATA/RDATA/METADATA_RBP-ENCODE.Rdataa")
+load("DATA/RDATA/METADATA_RBP-ENCODE.Rdata")
 load("DATA/RDATA/mCrossBase.Rdata")
 queryfile="DATA/SUPPORT_FILES//mCrossBase.meme"
 selexp<-which(exp_info$target %in% mcross_info$target)
