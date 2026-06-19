@@ -3,6 +3,13 @@
 This folder contains all the scripts used to produce the results reported in "**KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction**".
 
 ## Dependencies
+
+First, download the `hg38.2bit` file, which is required to extract genomic sequences from BED files:
+  
+`cd KDM/DATA/SUPPORT_FILES/`
+  
+`wget https://hgdownload.gi.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit`
+
 All the scripts require our package **rkdMotifs** to be installed (see folder CODE/R-PACKAGE)
 
 The scripts have a number of other dependencies:
