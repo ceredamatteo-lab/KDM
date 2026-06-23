@@ -148,7 +148,7 @@ plotClassification<-function(data,condition,sel,adjust=TRUE){
 data_folder="DATA/RESULTS/"
 
 load(paste0(data_folder,"classification_KDMMatch_Tomtom.Rdata"))
-result=data.frame(FACTORBOOK_HOCOMOCOV13_KDMMATCH=class_all_fb_hocomoco_kdmtom$fb_cat ,FACTORBOOK_HOCOMOCOV13_TOMTOM=class_all_fb_hocomoco_tomtom$fb_cat )
+result=data.frame(FACTORBOOK_HOCOMOCOV13_KDMMATCH=class$cat_KDMMatch ,FACTORBOOK_HOCOMOCOV13_TOMTOM=class$cat_Tomtom )
 
 p3<-plotClassification(result,"KDMMATCH",5)
 pdf(paste0(data_folder,"Fig4_tf_class.pdf"),height = 8,width = 10)
