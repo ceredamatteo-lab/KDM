@@ -7,7 +7,8 @@
 #include <mutex>
 #include <omp.h>
 
-#include <bits/posix_opt.h>
+//#include <bits/posix_opt.h>
+//#include <unistd.h>
 
 #define THRUST_IGNORE_CUB_VERSION_CHECK
 
@@ -131,28 +132,31 @@ namespace geco{
             static inline T* acquire(const indexType n_elem){
                 if(n_elem == 0)  { return nullptr; }        
                 T* out_memptr;
-    #if ( defined(_POSIX_ADVISORY_INFO) && (_POSIX_ADVISORY_INFO >= 200112L) )
-                {
-                    T* memptr = nullptr;
-                    const size_t n_bytes   = sizeof(T)*size_t(n_elem);
-                    const size_t alignment = (n_bytes >= size_t(1024)) ? size_t(32) : size_t(16);
-                    // FROM ARMADILLO
-                    // TODO: investigate apparent memory leak when using alignment >= 64 (as shown on Fedora 28, glibc 2.27)
-                    int status = posix_memalign((void **)&memptr, ( (alignment >= sizeof(void*)) ? alignment : sizeof(void*) ), n_bytes);
-                    out_memptr = (status == 0) ? memptr : nullptr;
-                }
-    #elif defined(_MSC_VER)
-                {
-                    const size_t n_bytes   = sizeof(T)*size_t(n_elem);
-                    const size_t alignment = (n_bytes >= size_t(1024)) ? size_t(32) : size_t(16);
-                    
-                    out_memptr = (T *) _aligned_malloc( n_bytes, alignment );
-                }
-    #else
-                {
-                    out_memptr = (T *) malloc(sizeof(T)*n_elem);
-                }
-    #endif
+                
+//THIS IS NOT WORKING WITH CLANG, I COMMENT IT KEEPING ONLY THE LAST ALTERNATIVE                 
+//     #if ( defined(_POSIX_ADVISORY_INFO) && (_POSIX_ADVISORY_INFO >= 200112L) )
+//                 {
+//                     T* memptr = nullptr;
+//                     const size_t n_bytes   = sizeof(T)*size_t(n_elem);
+//                     const size_t alignment = (n_bytes >= size_t(1024)) ? size_t(32) : size_t(16);
+//                     // FROM ARMADILLO
+//                     // TODO: investigate apparent memory leak when using alignment >= 64 (as shown on Fedora 28, glibc 2.27)
+//                     int status = posix_memalign((void **)&memptr, ( (alignment >= sizeof(void*)) ? alignment : sizeof(void*) ), n_bytes);
+//                     out_memptr = (status == 0) ? memptr : nullptr;
+//                 }
+//     #elif defined(_MSC_VER)
+//                 {
+//                     const size_t n_bytes   = sizeof(T)*size_t(n_elem);
+//                     const size_t alignment = (n_bytes >= size_t(1024)) ? size_t(32) : size_t(16);
+//                     
+//                     out_memptr = (T *) _aligned_malloc( n_bytes, alignment );
+//                 }
+//     #else
+//                 {
+//                     out_memptr = (T *) malloc(sizeof(T)*n_elem);
+//                 }
+//     #endif
+                out_memptr = (T *) malloc(sizeof(T)*n_elem);
                 if(out_memptr == nullptr){
                     throw gMethodException("gMethods: out of memory");
                 }
@@ -162,21 +166,23 @@ namespace geco{
 
             static inline void release(T* mem){
                 if(mem == nullptr)  { return; }        
-#if ( defined(_POSIX_ADVISORY_INFO) && (_POSIX_ADVISORY_INFO >= 200112L) )            
-                {
-                    free( (void *)(mem) );
-                }
-#elif defined(_MSC_VER)
-                {
-                    //free( (void *)(mem) );
-                    _aligned_free( (void *)(mem) );
-                }
-#else
-                {
-                //delete [] mem;
-                    free( (void *)(mem) );
-                }
-#endif
+//THIS IS NOT WORKING WITH CLANG, I COMMENT IT KEEPING ONLY THE LAST ALTERNATIVE                 
+// #if ( defined(_POSIX_ADVISORY_INFO) && (_POSIX_ADVISORY_INFO >= 200112L) )            
+//                 {
+//                     free( (void *)(mem) );
+//                 }
+// #elif defined(_MSC_VER)
+//                 {
+//                     //free( (void *)(mem) );
+//                     _aligned_free( (void *)(mem) );
+//                 }
+// #else
+//                 {
+//                 //delete [] mem;
+//                     free( (void *)(mem) );
+//                 }
+// #endif
+                free( (void *)(mem) );
             }
             
             gMMemory(){

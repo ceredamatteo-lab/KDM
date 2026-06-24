@@ -1687,7 +1687,8 @@ gMDense<T> geco::methods::kdmotifs::kdmSimilarity(const D<T> & D1,const D<T> & D
 //         return multiply((const gMDense<T> &)D1,(const gMDense<T> &)D2,true,false);
 //     }
     if(std::is_convertible<D<T>,gMSparse<T>>::value){
-        return toDense(multiply((const gMSparse<T> &)D1,(const gMSparse<T> &)D2,true,false));
+        //return toDense(multiply((const gMSparse<T> &)D1,(const gMSparse<T> &)D2,true,false));
+        return multiply(toDense((const gMSparse<T> &)D1),toDense((const gMSparse<T> &)D2),true,false);
     }else if(std::is_convertible<D<T>,gMDense<T>>::value){
         return multiply((const gMDense<T> &)D1,(const gMDense<T> &)D2,true,false);
     }

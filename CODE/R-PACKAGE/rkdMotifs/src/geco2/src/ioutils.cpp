@@ -39,7 +39,7 @@ bool geco::utils::gzopen(const gString & filename,utils::gInputFileStream & stre
 
 gString geco::utils::getFileName(const gString & filePath, bool withExtension){
 	// Create a Path object from File Path
-	boost::filesystem::path pathObj(filePath);
+	boost::filesystem::path pathObj((const std::string) filePath);
  
 	// Check if file name is required without extension
 	if(withExtension == false)

@@ -1,4 +1,5 @@
 #include <list>
+
 #include "gMethods_armadillo.h"
 #include <omp.h>
 

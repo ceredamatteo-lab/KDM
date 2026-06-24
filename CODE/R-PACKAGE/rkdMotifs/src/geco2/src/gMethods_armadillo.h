@@ -12,7 +12,9 @@
 //#define ARMA_EXTRA_DEBUG
 #define ARMA_USE_OPENMP
 #define ARMA_USE_CXX11
+
 #include "armadillo/armadillo"
+
 
 namespace geco{
     namespace methods{

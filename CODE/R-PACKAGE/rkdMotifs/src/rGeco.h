@@ -56,16 +56,6 @@ namespace geco{
   }
 
   namespace methods{
-    
-
-    void gMethodRInterrupt(){
-      Rcpp::checkUserInterrupt();
-    }
-    
-    void gMethodRWarnings(const std::string & message){
-      Rcpp::warning(message);
-    }
-  
 
     template<typename T>
     geco::methods::gMDense<T> convertFromR(const Rcpp::NumericMatrix & mat){
@@ -156,8 +146,12 @@ namespace geco{
   }
 }
 
-//[[Rcpp::export]]
+
+
+/* moved in rGreco.cpp
+//[[Rcpp::init]]
 void initPackage(){
+  Rcpp::Rcout << "InitPackage Called!" << std::endl;
   geco::methods::setWarningCallback(&geco::methods::gMethodRWarnings);
   geco::methods::setInterruptCallback(&geco::methods::gMethodRInterrupt);
   geco::methods::setgMethodsSeed(std::time(NULL));
@@ -182,3 +176,4 @@ void setVerbosity(unsigned short verbosity){
 void setgMethodsSeed(float seed){
   geco::methods::setgMethodsSeed(seed);
 }
+*/

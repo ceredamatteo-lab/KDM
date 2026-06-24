@@ -10,15 +10,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// initPackage
-void initPackage();
-RcppExport SEXP _rkdMotifs_initPackage() {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    initPackage();
-    return R_NilValue;
-END_RCPP
-}
 // setCudaUsage
 void setCudaUsage(bool use_cuda);
 RcppExport SEXP _rkdMotifs_setCudaUsage(SEXP use_cudaSEXP) {
@@ -827,7 +818,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rkdMotifs_initPackage", (DL_FUNC) &_rkdMotifs_initPackage, 0},
     {"_rkdMotifs_setCudaUsage", (DL_FUNC) &_rkdMotifs_setCudaUsage, 1},
     {"_rkdMotifs_setNCores", (DL_FUNC) &_rkdMotifs_setNCores, 1},
     {"_rkdMotifs_setVerbosity", (DL_FUNC) &_rkdMotifs_setVerbosity, 1},
@@ -886,7 +876,9 @@ static const R_CallMethodDef CallEntries[] = {
     {NULL, NULL, 0}
 };
 
+void initPackage(DllInfo* dll);
 RcppExport void R_init_rkdMotifs(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
+    initPackage(dll);
 }
