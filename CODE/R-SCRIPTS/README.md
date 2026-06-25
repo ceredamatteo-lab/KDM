@@ -47,3 +47,6 @@ The scripts have a number of other dependencies:
 Once you have downloaded To execute the scripts you need to set your R working directory to the CODE folder of this repository
 
 	
+## R VERSION
+
+All the scripts have been tested on R version 4.0.5 (2021-03-31) -- "Shake and Throw"
