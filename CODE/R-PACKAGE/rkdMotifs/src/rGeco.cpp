@@ -5,9 +5,7 @@
 static void checkRInterruptFn(void* dummy) { R_CheckUserInterrupt(); }
 
 void gMethodRInterrupt() {
-    // Rcpp::Rcout << "checkInterrupt called" << std::endl;
     if (R_ToplevelExec(checkRInterruptFn, nullptr) == FALSE){
-        // Rcpp::Rcout << "interrupt detected, throwing gMethodsInterrupt" << std::endl;
         throw geco::methods::gMethodsInterrupt();
     }
 }    

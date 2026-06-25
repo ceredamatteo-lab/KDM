@@ -1230,9 +1230,7 @@ template<typename T>
 gKDistr<T> geco::methods::kdmotifs::kdmDistr(const std::vector<std::string> & sequences,indexType kmerlength,indexType ngaps,bool doubleStrand,bool estimatekmers,bool strict){
     gMSparse<T> mat;
     if(estimatekmers && ngaps!=0){
-        std::cout << "1" << std::endl;
         gLmerEstimator<T> counter(kmerlength,kmerlength-ngaps,doubleStrand);
-        std::cout << "2" << std::endl;
         mat=counter.countSparse(sequences,strict);
     }else if(ngaps==0){
         gLmerCounter<T> counter(kmerlength,doubleStrand);
@@ -1241,7 +1239,6 @@ gKDistr<T> geco::methods::kdmotifs::kdmDistr(const std::vector<std::string> & se
         gGappedKmerCounter<T> counter(kmerlength,kmerlength-ngaps,doubleStrand);
         mat=counter.countSparse(sequences,strict);
     }
-    std::cout << "3" << std::endl;
     return gKDistr<T>(toHellinger(mat),kmerlength,ngaps,doubleStrand,estimatekmers);    
 }
 template gKDistr<float> geco::methods::kdmotifs::kdmDistr(const std::vector<std::string> & sequences,indexType kmerlength,indexType ngaps,bool doubleStrand,bool estimatekmers,bool strict);

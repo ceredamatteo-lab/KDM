@@ -96,11 +96,9 @@ map<size_t,list<unsigned char>>  seqCode(const std::string  & seq,indexType sID,
             pos++;
         }
         auto plist=res.insert(make_pair(pos,list<unsigned char>()));
-        while(pos < sl){
-            if(tres[pos]!=4){
-                (*plist.first).second.push_back(tres[pos]);
-                pos++;
-            }
+        while(pos < sl && tres[pos]!=4){
+            (*plist.first).second.push_back(tres[pos]);
+            pos++;
         }
     }
     if(res.size()>1){
@@ -506,7 +504,7 @@ gMDense<T> gLmerCounter<T>::countWinDense(const string & sequence,indexType win,
 
         RES=gMDense<T>(nrows,ncols,lmers.data());
     }else{ //Invalid charaters we do it thes slow way
-        cout << "The slow way" << endl;
+        //cout << "The slow way" << endl;
         vector<string> seqs(ncols);
         for(indexType p=0;p<ncols;p++){
             seqs[p] = sequence.substr(p,win);
@@ -597,7 +595,7 @@ gMSparse<T> gLmerCounter<T>::countWinSparse(const string & sequence,indexType wi
         
         RES=gMSparse<T>(lmers,nrows);
     }else{ //Invalid charaters we do it thes slow way
-        cout << "The slow way" << endl;
+        // cout << "The slow way" << endl;
         vector<string> seqs(ncols);
         for(indexType p=0;p<ncols;p++){
             seqs[p] = sequence.substr(p,win);
@@ -1267,6 +1265,7 @@ gMSparse<T> gGappedKmerCounter<T>::countSparse(const std::vector<std::string> & 
                 }
             }
             if(!nnzero) warning(string("gGappedKmerCounter: sequence ")+sequences[s]+" ("+to_string(s+1)+") "+" had zero counts");
+           
             gkmers[s]=tres;
             //checkInterrupt();
         }catch(...){
@@ -1372,7 +1371,7 @@ gMDense<T> gGappedKmerCounter<T>::countWinDense(const string & sequence,indexTyp
 //         cout << "time: " << dur.count()*1000 << "ms" << endl;
         RES=gMDense<T>(nrows,ncols,gkmers.data());
     }else{ //Invalid charaters we do it thes slow way
-        cout << "The slow way" << endl;
+        // cout << "The slow way" << endl;
         vector<string> seqs(ncols);
         for(indexType p=0;p<ncols;p++){
             seqs[p] = sequence.substr(p,win);
@@ -1483,7 +1482,7 @@ gMSparse<T> gGappedKmerCounter<T>::countWinSparse(const string & sequence,indexT
 //         cout << "time: " << dur.count()*1000 << "ms" << endl;
         RES=gMSparse<T>(gkmers,nrows);
     }else{ //Invalid charaters we do it the slow way
-        cout << "The slow way" << endl;
+        // cout << "The slow way" << endl;
         vector<string> sequences(nwins);
         for(indexType p=0;p<nwins;p++){
             sequences[p] = sequence.substr(p,win);
