@@ -1,0 +1,79 @@
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(irr)
+
+data_folder="DATA/RESULTS/"
+
+
+## TF #####
+
+load("DATA/RESULTS/classification_KDMMap_Centrimo.Rdata")
+breaks=c(0,5,10000,Inf)
+labels=c("1-5",">5","Not selected")
+i=4
+d=jaccard[[i]]%>%
+    mutate(class.centrimo=cut(rank_centrimo,breaks = breaks,labels=labels),
+           class.kdm=cut(rank_kdm,breaks = breaks,labels=labels))
+all_combos <- expand.grid(class.centrimo = unique(d$class.centrimo),class.kdm = unique(d$class.kdm))
+tmp <- d %>%
+    count(class.centrimo,class.kdm) %>%
+    right_join(all_combos, by = c("class.centrimo","class.kdm")) %>%
+    mutate(Freq = ifelse(is.na(n), 0, n)) %>%
+    group_by(class.centrimo) %>% mutate(tot.Var1 = sum(Freq)) %>% ungroup() %>%
+    group_by(class.kdm) %>% mutate(tot.Var2 = sum(Freq)) %>% ungroup() %>%
+    mutate(Jaccard = Freq / (tot.Var1 + tot.Var2 - Freq))
+kk=kappa2(data.frame(d$class.centrimo, d$class.kdm))$value
+  
+p=ggplot(tmp,aes(x=class.kdm,y=class.centrimo,fill=Jaccard))+
+    scale_y_discrete(limits=rev)+
+    geom_tile(col="black")+
+    coord_equal()+
+    geom_text(aes(label=Freq))+
+    scale_fill_gradient2(low = "white",high = "purple4",mid="pink",midpoint=0.4)+
+    theme_minimal()+
+    theme(panel.grid = element_blank(),
+      axis.text.x = element_text(angle=45,hjust=1,size=10),
+      axis.text.y = element_text(size=10),
+      plot.title = element_text(size=12))+
+    ylab("Centrimo")+xlab("KDMMap")+ggtitle(paste0("K.Cohen coefficient: ",round(kk,3)))
+
+pdf(paste0(data_folder,"Fig3_tf_class.pdf"),height = 8,width = 10)
+p
+dev.off()
+
+ ## RBP #####
+
+load("DATA/RESULTS/classification_KDMMap_Centrimo_RBP.Rdata")
+breaks=c(0,5,10000,Inf)
+labels=c("1-5",">5","Not selected")
+i=4
+d=jaccard[[i]]%>%
+    mutate(class.centrimo=cut(rank_centrimo,breaks = breaks,labels=labels),
+           class.kdm=cut(rank_kdm,breaks = breaks,labels=labels))
+all_combos <- expand.grid(class.centrimo = unique(d$class.centrimo),class.kdm = unique(d$class.kdm))
+tmp <- d %>%
+    count(class.centrimo,class.kdm) %>%
+    right_join(all_combos, by = c("class.centrimo","class.kdm")) %>%
+    mutate(Freq = ifelse(is.na(n), 0, n)) %>%
+    group_by(class.centrimo) %>% mutate(tot.Var1 = sum(Freq)) %>% ungroup() %>%
+    group_by(class.kdm) %>% mutate(tot.Var2 = sum(Freq)) %>% ungroup() %>%
+    mutate(Jaccard = Freq / (tot.Var1 + tot.Var2 - Freq))
+kk=kappa2(data.frame(d$class.centrimo, d$class.kdm))$value
+  
+p=ggplot(tmp,aes(x=class.kdm,y=class.centrimo,fill=Jaccard))+
+    scale_y_discrete(limits=rev)+
+    geom_tile(col="black")+
+    coord_equal()+
+    geom_text(aes(label=Freq))+
+    scale_fill_gradient2(low = "white",high = "purple4",mid="pink",midpoint=0.4)+
+    theme_minimal()+
+    theme(panel.grid = element_blank(),
+      axis.text.x = element_text(angle=45,hjust=1,size=10),
+      axis.text.y = element_text(size=10),
+      plot.title = element_text(size=12))+
+    ylab("Centrimo")+xlab("KDMMap")+ggtitle(paste0("K.Cohen coefficient: ",round(kk,3)))
+
+pdf(paste0(data_folder,"Fig3_rbp_class.pdf"),height = 8,width = 10)
+p
+dev.off()
