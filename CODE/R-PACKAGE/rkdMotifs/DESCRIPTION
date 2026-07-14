@@ -6,7 +6,7 @@ Date: 2026-01-01
 Author: Uberto Pozzoli
 Maintainer: Uberto Pozzoli <uberto.pozzoli@lanostrafamiglia.it>
 Description: Package Uused for analyzing data in the KDM paper
-License: GPL (>= 2)
+License: GPL (>= 3)
 Imports: Rcpp (>= 1.0.6)
 Depends: Matrix
 LinkingTo: Rcpp

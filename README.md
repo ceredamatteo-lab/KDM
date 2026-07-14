@@ -4,10 +4,9 @@
 
 This repository contains the analysis code, precomputed intermediate data, and figures accompanying the KDM paper:
 
-> Fumagalli L.\*, Becchi T.\*, Cereda M.†, Pozzoli U.† — *KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction.*
-> \*Equal contribution. †Joint senior and corresponding authors.
+> Fumagalli L.\*, Becchi T.\*, Cereda M.†, Pozzoli U.† — *KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction.* \*Equal contribution. †Joint senior and corresponding authors.
 
----
+------------------------------------------------------------------------
 
 ## Overview
 
@@ -18,19 +17,19 @@ Motif discovery and binding-site prediction in DNA and RNA are central tasks in 
 Four tools are instantiated on this representation:
 
 | Tool | Purpose |
-|------|---------|
+|-----------------------------|-------------------------------------------|
 | **KDMMap** | Positional enrichment analysis |
 | **KDMMatch** | Information-content-aware motif matching / annotation |
 | **KDMFind** | Unsupervised de novo motif discovery via projective non-negative matrix factorization (PNMF) |
 | **KDM-LRLM** | Binding prediction with Lasso-regularized logistic regression |
 
----
+------------------------------------------------------------------------
 
 ## Repository scope
 
 > **Note.** This repository is the **reproducibility / figure-generation companion** to the paper. It holds the R scripts that produce the manuscript figures together with the precomputed `Rdata` they consume. The core KDM engine itself lives in the separate R package **`rkdMotifs`**, which the discovery/analysis scripts depend on (see [Dependencies](#dependencies)).
 
-```
+```         
 KDM/
 ├── CODE/
    ├── R-SCRIPTS   # Scripts used to produce paper figure
@@ -40,18 +39,17 @@ KDM/
 └── README.md
 ```
 
-
-
 ## Citation
 
-If you use KDM, please cite the paper above. The KDM software package is available at
-<https://github.com/ceredamatteo-lab/KDM>.
+If you use KDM, please cite the paper above. The KDM software package is available at <https://github.com/ceredamatteo-lab/KDM>.
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2024 Matteo Cereda.
+© 2010-2026 Uberto Pozzoli and Matteo Cereda
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 ## Contact
 
-- Uberto Pozzoli — <uberto.pozzoli@lanostrafamiglia.it>
-- Matteo Cereda — <matteo.cereda@ifom.eu>
+- Uberto Pozzoli — [uberto.pozzoli\@lanostrafamiglia.it](mailto:uberto.pozzoli@lanostrafamiglia.it){.email}
+- Matteo Cereda — [matteo.cereda\@ifom.eu](mailto:matteo.cereda@ifom.eu){.email}
