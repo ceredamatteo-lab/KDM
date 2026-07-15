@@ -35,7 +35,7 @@ KDM/
    ├── R-SCRIPTS   # Scripts used to produce paper figure
    ├── R-PACKAGE   # Code for installing rkdmotifs     
 ├── DATA/          # Datasets used to produce paper figure + Rdata generated
-├── LICENSE        # MIT
+├── gpl-3.0.md     # GPL license
 └── README.md
 ```
 
