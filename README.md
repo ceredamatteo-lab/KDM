@@ -1,6 +1,6 @@
 # KDM
 
-[![DOI](https://zenodo.org/badge/21383380.svg)](https://zenodo.org/badge/latestdoi/21383380)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21383381-blue)](https://doi.org/10.5281/zenodo.21383381)
 
 **Embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction**
 
