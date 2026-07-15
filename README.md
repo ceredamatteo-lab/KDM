@@ -1,5 +1,7 @@
 # KDM
 
+[![DOI](https://doi.org/10.5281/zenodo.20428659.svg)](https://doi.org/10.5281/zenodo.20428659)
+
 **Embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction**
 
 This repository contains the analysis code, precomputed intermediate data, and figures accompanying the KDM paper:
