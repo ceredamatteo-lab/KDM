@@ -113,7 +113,7 @@ for(i in 1:length(RBPs)){
   sel<-which(wall_kdm_info$target==RBPs[i])
   which((tom1$query %in% sel) & (tom1$target %in% sel))
 }
-save(file="DATA/RESULTS/RBP_wall_kdm_.Rdata",,wall_kdm,wall_kdm_info,wall_kdm_tinfo)
+save(file="DATA/RESULTS/RBP_wall_kdm_.Rdata",wall_kdm,wall_kdm_info,wall_kdm_tinfo)
 
 ### END   KDM WALL
 
