@@ -1,7 +1,5 @@
 # KDM
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21383381-blue)](https://doi.org/10.5281/zenodo.21383381)
-
 **Embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction**
 
 This repository contains the analysis code, precomputed intermediate data, and figures accompanying the KDM paper:
@@ -19,7 +17,7 @@ Motif discovery and binding-site prediction in DNA and RNA are central tasks in 
 Four tools are instantiated on this representation:
 
 | Tool | Purpose |
-|-----------------------------|-------------------------------------------|
+|------------------------------------|------------------------------------|
 | **KDMMap** | Positional enrichment analysis |
 | **KDMMatch** | Information-content-aware motif matching / annotation |
 | **KDMFind** | Unsupervised de novo motif discovery via projective non-negative matrix factorization (PNMF) |
@@ -29,16 +27,16 @@ Four tools are instantiated on this representation:
 
 ## Repository scope
 
-> **Note.** This repository is the **reproducibility / figure-generation companion** to the paper. It holds the R scripts that produce the manuscript figures together with the precomputed `Rdata` they consume. The core KDM engine itself lives in the separate R package **`rkdMotifs`**, which the discovery/analysis scripts depend on (see [Dependencies](#dependencies)).
+> **Note.** This repository is the **reproducibility / figure-generation companion** to the paper. It holds the R scripts that produce the manuscript figures together with the precomputed `Rdata` they consume. The core KDM engine itself lives in the separate R package **`rkdMotifs`**, which the discovery/analysis scripts depend on.
 
 ```         
 KDM/
 ├── CODE/
    ├── R-SCRIPTS   # Scripts used to produce paper figure
-   ├── R-PACKAGE   # Code for installing rkdmotifs     
+   ├── R-PACKAGE   # rkdmotifs R source package
 ├── DATA/          # Datasets used to produce paper figure + Rdata generated
 ├── gpl-3.0.md     # GPL license
-└── README.md
+└── README.md      # This file
 ```
 
 ## Citation
