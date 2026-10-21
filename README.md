@@ -39,6 +39,10 @@ KDM/
 └── README.md      # This file
 ```
 
+## Tutorial
+
+A tutorial with some example data illustrating how to use the rkdMotifs package is available at <https://www.ceredalab.com/page-kdm.html>.
+
 ## Citation
 
 If you use KDM, please cite the paper above. The KDM software package is available at <https://github.com/ceredamatteo-lab/KDM>.
@@ -49,7 +53,7 @@ If you use KDM, please cite the paper above. The KDM software package is availab
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-## Contact
+## Contacts
 
 - Uberto Pozzoli — [uberto.pozzoli\@lanostrafamiglia.it](mailto:uberto.pozzoli@lanostrafamiglia.it){.email}
 - Matteo Cereda — [matteo.cereda\@ifom.eu](mailto:matteo.cereda@ifom.eu){.email}
