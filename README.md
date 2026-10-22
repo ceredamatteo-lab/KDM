@@ -4,7 +4,7 @@
 
 This repository contains the analysis code, precomputed intermediate data, and figures accompanying the KDM paper:
 
-> Fumagalli L.\*, Becchi T.\*, Cereda M.†, Pozzoli U.† — *KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction.* \*Equal contribution. †Joint senior and corresponding authors.
+> Fumagalli L.\*, Becchi T.\*, Cereda M.†, Pozzoli U.†. *KDM: embedding DNA/RNA motifs and sequences in a shared k-mer space for unified discovery, analysis and binding prediction.* \*Equal contribution. †Joint senior and corresponding authors.
 
 ------------------------------------------------------------------------
 
