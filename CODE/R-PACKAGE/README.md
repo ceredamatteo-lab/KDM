@@ -12,7 +12,7 @@ The package has the following dependencies:
 
 ```         
 Dependency          Status      Tested Version
-cmake               Required        3.18
+cmake               Required        3.30
 CUDA Toolkit        Optional        12.9
 OpenBLAS            Required        3.29
 NLopt               Required        1.00
