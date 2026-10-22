@@ -40,7 +40,7 @@ R CMD INSTALL --configure-args="--without-cuda" rkdMotifs_1.0.tar.gz
 
 ## Docker images
 
-As an alternative to installing the package in your own R environment, we provide two Docker images: one with CUDA support (kdm-cuda_image.tar.gz) and one without (kdm_image.tar.gz). The images can be downloaded from <https://doi.org/10.5281/zenodo.23492619.>
+As an alternative to installing the package in your own R environment, we provide two Docker images: one with CUDA support (kdm-cuda_image.tar.gz) and one without (kdm_image.tar.gz). The images can be downloaded from <https://doi.org/10.5281/zenodo.23492619>.
 
 Then, load the image into Docker, with CUDA support:
 
